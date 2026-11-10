@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-brand: #3182f6;
+    --color-brand-soft: #e8f3ff;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', sans-serif;
+}
+
+html,
+body {
+    background: #f2f4f6;
+    color: #191f28;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+}
+html.dark,
+html.dark body {
+    background: #101113;
+    color: #e5e8eb;
+}
+
+/* 아이폰 홈 바·노치 영역 피하기 */
+.safe-top {
+    padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+input,
+textarea,
+select {
+    font-size: 16px; /* 아이폰에서 입력할 때 화면이 확대되지 않게 */
+}
