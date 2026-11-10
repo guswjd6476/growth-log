@@ -4,7 +4,7 @@ import { daysBetween, today } from '../lib/date';
 import { toCSV } from '../lib/logic';
 import { Btn, Card, Chip, inputCls, label, PageTitle } from '../components/ui';
 import type { Settings } from '../lib/types';
-import { sb, signIn, signOut, signUp, syncNow, syncUser, useSync } from '../lib/sync';
+import { sb, sendCode, signOut, syncEmail, syncNow, useSync, verifyCode } from '../lib/sync';
 import { disablePush, enablePush, pushAvailable, pushOn } from '../lib/push';
 
 function download(name: string, text: string, type: string) {
@@ -204,31 +204,27 @@ function ListField({ label: l, value, onChange }: { label: string; value: string
 
 function SyncCard() {
     const st = useSync();
-    const user = syncUser();
-    const [id, setId] = useState('');
-    const [pw, setPw] = useState('');
+    const email = syncEmail();
+    const [input, setInput] = useState('');
+    const [code, setCode] = useState('');
+    const [step, setStep] = useState<'email' | 'code'>('email');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
-    const go = async (fn: typeof signIn, fail: string) => {
-        if (!/^[a-z0-9_.-]{3,30}$/i.test(id.trim())) return setMsg('아이디는 영문·숫자 3~30자로 해 주세요.');
-        if (pw.length < 6) return setMsg('비밀번호는 6자 이상으로 해 주세요.');
+    const run = async (fn: () => Promise<void>) => {
         setBusy(true);
         setMsg('');
         try {
-            await fn(id, pw);
-            await syncNow();
-            // 알림을 켜 둔 기기면 앱이 닫혀도 오게
-            if (getData().settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'granted') await enablePush().catch(() => {});
+            await fn();
         } catch {
-            setMsg(fail);
+            setMsg(step === 'email' ? '코드를 보내지 못했어요. 이메일을 확인하거나 잠시 뒤 다시 해 주세요.' : '코드가 맞지 않거나 시간이 지났어요.');
         }
         setBusy(false);
     };
 
-    if (user)
+    if (email)
         return (
             <Card title="🔄 기기 간 동기화">
-                <p className="text-[14px]">{user}</p>
+                <p className="text-[14px]">{email}</p>
                 <p className="text-[12px] text-[#8b95a1] mt-1">
                     {st.state === 'syncing' ? '맞추는 중…' : st.state === 'error' ? '동기화하지 못했어요. 인터넷이 되면 다시 해요.' : st.at ? `마지막 동기화 ${new Date(st.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}` : '연결됨'}
                 </p>
@@ -245,20 +241,38 @@ function SyncCard() {
 
     return (
         <Card title="🔄 기기 간 동기화">
-            <p className="text-[13px] text-[#6b7684]">아이디로 로그인하면 휴대폰·컴퓨터 어디서나 같은 기록을 써요. 지금 이 기기의 기록도 합쳐서 올려요.</p>
-            <form className="space-y-2 mt-3" onSubmit={(e) => (e.preventDefault(), go(signIn, '아이디나 비밀번호가 맞지 않아요.'))}>
-                <input autoComplete="username" autoCapitalize="none" className={inputCls} placeholder="아이디" value={id} onChange={(e) => setId(e.target.value)} />
-                <input type="password" autoComplete="current-password" className={inputCls} placeholder="비밀번호 (6자 이상)" value={pw} onChange={(e) => setPw(e.target.value)} />
-                <div className="grid grid-cols-2 gap-2">
-                    <Btn type="submit" disabled={busy}>
-                        로그인
+            <p className="text-[13px] text-[#6b7684]">이메일로 로그인하면 휴대폰·컴퓨터 어디서나 같은 기록을 써요. 지금 이 기기의 기록도 합쳐서 올려요.</p>
+            {step === 'email' ? (
+                <form className="flex gap-2 mt-3" onSubmit={(e) => (e.preventDefault(), run(async () => (await sendCode(input.trim()), setStep('code'))))}>
+                    <input type="email" required autoComplete="email" className={inputCls} placeholder="이메일" value={input} onChange={(e) => setInput(e.target.value)} />
+                    <Btn type="submit" className="shrink-0" disabled={busy}>
+                        코드 받기
                     </Btn>
-                    <Btn kind="soft" disabled={busy} onClick={() => go(signUp, '가입하지 못했어요. 이미 있는 아이디일 수 있어요.')}>
-                        처음이에요 (가입)
+                </form>
+            ) : (
+                <form
+                    className="flex gap-2 mt-3"
+                    onSubmit={(e) => (
+                        e.preventDefault(),
+                        run(async () => {
+                            await verifyCode(input.trim(), code.trim());
+                            await syncNow();
+                            // 알림을 켜 둔 기기면 앱이 닫혀도 오게
+                            if (getData().settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'granted') await enablePush().catch(() => {});
+                        })
+                    )}
+                >
+                    <input inputMode="numeric" autoComplete="one-time-code" className={inputCls} placeholder="메일로 온 6자리 코드" value={code} onChange={(e) => setCode(e.target.value)} />
+                    <Btn type="submit" className="shrink-0" disabled={busy || !code.trim()}>
+                        확인
                     </Btn>
-                </div>
-            </form>
-            <p className="text-[12px] text-[#8b95a1] mt-2">메일 인증이 없어서 비밀번호를 잊으면 찾을 수 없어요. 기록은 이 기기에 그대로 남아요.</p>
+                </form>
+            )}
+            {step === 'code' && (
+                <button type="button" className="text-[12px] text-[#8b95a1] mt-2 underline" onClick={() => setStep('email')}>
+                    이메일 다시 입력
+                </button>
+            )}
             {msg && <p className="text-[13px] text-[#e42939] mt-2">{msg}</p>}
         </Card>
     );

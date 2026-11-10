@@ -23,7 +23,8 @@ npm run build    # 배포용 빌드 (dist/)
 
 1. [supabase.com](https://supabase.com)에서 프로젝트 만들기
 2. **SQL Editor**에 `supabase/migrations/0001_init.sql` 내용을 붙여 넣고 실행
-3. **Authentication → Sign In / Providers → Email**에서 **Confirm email 끄기** (메일을 한 통도 보내지 않음. 앱은 아이디+비밀번호로 로그인)
+3. **Authentication → Emails → Magic Link 템플릿**에 `{{ .Token }}` 를 넣기 (6자리 코드로 로그인. 링크 방식은 홈 화면 앱이 아니라 Safari로 열려서 안 씀)
+   - 예: `<h2>성장일지 로그인 코드</h2><p>{{ .Token }}</p>`
 4. 푸시용 키 만들기: `npx web-push generate-vapid-keys`
 5. Vercel 환경 변수 (Project Settings → API에서 복사)
    - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`(위 Public Key)
@@ -32,7 +33,7 @@ npm run build    # 배포용 빌드 (dist/)
    ```bash
    npx supabase login
    npx supabase link --project-ref <프로젝트 ref>
-   npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=https://<내 Vercel 주소> CRON_SECRET=<아무 긴 문자열>
+   npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:<내 이메일> CRON_SECRET=<아무 긴 문자열>
    npx supabase functions deploy remind --no-verify-jwt
    ```
 7. 1분마다 함수 부르기: **SQL Editor**에서 실행 (`<ref>`, `<CRON_SECRET>` 바꾸기)
@@ -71,5 +72,4 @@ npm run build    # 배포용 빌드 (dist/)
 ## 아직 없는 것
 
 - 바코드로 책 찍기
-- 비밀번호 찾기 (메일을 안 쓰므로 잊으면 새 아이디로 가입해야 함. 기기 안 기록은 남아 있어 합쳐 올라감)
 - 다른 기기에서 지운 항목이 오프라인으로 수정하던 기기에서 되살아날 수 있음 (드묾)

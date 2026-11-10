@@ -1,11 +1,11 @@
-import { sb, syncUser } from './sync';
+import { sb, syncEmail } from './sync';
 
 // 앱이 닫혀 있어도 오는 알림: 이 기기 구독을 서버(push_subs)에 올리면 서버가 1분마다 보낸다.
 // 로그인해서 기록이 서버에 있어야 쓸 수 있다.
 const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 const FLAG = 'growth-log:push';
 
-export const pushAvailable = () => !!(sb && vapid && syncUser() && 'serviceWorker' in navigator && 'PushManager' in window);
+export const pushAvailable = () => !!(sb && vapid && syncEmail() && 'serviceWorker' in navigator && 'PushManager' in window);
 
 // 켜져 있으면 앱 안 알림은 끈다 (같은 알림이 두 번 오지 않게)
 export const pushOn = () => {

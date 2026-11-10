@@ -39,10 +39,7 @@ export const useSync = () =>
         (l) => (listeners.add(l), () => listeners.delete(l)),
         () => status,
     );
-// 메일은 안 쓴다: 아이디를 가짜 주소로 바꿔 Supabase 이메일+비밀번호 로그인에 넣는다 (Supabase에서 메일 인증을 꺼 둠)
-const DOMAIN = '@users.growth-log.example';
-const toEmail = (id: string) => `${id.trim().toLowerCase()}${DOMAIN}`;
-export const syncUser = () => session?.user.email?.replace(DOMAIN, '') ?? null;
+export const syncEmail = () => session?.user.email ?? null;
 
 let applying = false;
 function apply(d: Data) {
@@ -131,14 +128,13 @@ export function startSync() {
 
 export const syncNow = sync;
 
-export async function signIn(id: string, password: string) {
-    const { error } = await sb!.auth.signInWithPassword({ email: toEmail(id), password });
+export async function sendCode(email: string) {
+    const { error } = await sb!.auth.signInWithOtp({ email });
     if (error) throw error;
 }
-export async function signUp(id: string, password: string) {
-    const { data, error } = await sb!.auth.signUp({ email: toEmail(id), password });
+export async function verifyCode(email: string, token: string) {
+    const { error } = await sb!.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
-    if (!data.session) throw new Error('Supabase에서 Confirm email 이 켜져 있음');
 }
 export async function signOut() {
     await sb!.auth.signOut();
