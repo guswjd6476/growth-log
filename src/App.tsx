@@ -14,6 +14,8 @@ import GoalsPage from './pages/Goals';
 import JournalPage from './pages/Journal';
 import StatsPage from './pages/Stats';
 import SettingsPage from './pages/Settings';
+import LoginPage from './pages/Login';
+import { syncEmail, useSync } from './lib/sync';
 
 const PAGES: Record<Route, () => React.JSX.Element> = {
     today: TodayPage,
@@ -99,6 +101,9 @@ export default function App() {
     const saveError = getSaveError();
     const Page = PAGES[route];
     const activeTab = MORE.includes(route) ? 'more' : route;
+    const sync = useSync();
+    if (sync.state === 'loading') return null; // 저장된 로그인 확인 중 (잠깐)
+    if (!syncEmail()) return <LoginPage />;
 
     return (
         <div className="min-h-dvh safe-top">

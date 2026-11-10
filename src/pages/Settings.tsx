@@ -4,7 +4,7 @@ import { daysBetween, today } from '../lib/date';
 import { toCSV } from '../lib/logic';
 import { Btn, Card, Chip, inputCls, label, PageTitle } from '../components/ui';
 import type { Settings } from '../lib/types';
-import { sb, sendCode, signOut, syncEmail, syncNow, useSync, verifyCode } from '../lib/sync';
+import { signOut, syncEmail, syncNow, useSync } from '../lib/sync';
 import { disablePush, enablePush, pushAvailable, pushOn } from '../lib/push';
 
 function download(name: string, text: string, type: string) {
@@ -123,7 +123,7 @@ export default function SettingsPage() {
                     </div>
                 </Card>
 
-                {sb && <SyncCard />}
+                <SyncCard />
 
                 <Card title="과목·분류">
                     <ListField label="공부 과목 (쉼표로 구분)" value={s.subjects} onChange={(v) => set('subjects', v)} />
@@ -204,76 +204,28 @@ function ListField({ label: l, value, onChange }: { label: string; value: string
 
 function SyncCard() {
     const st = useSync();
-    const email = syncEmail();
-    const [input, setInput] = useState('');
-    const [code, setCode] = useState('');
-    const [step, setStep] = useState<'email' | 'code'>('email');
-    const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
-    const run = async (fn: () => Promise<void>) => {
+    const logout = async () => {
+        if (!confirm('로그아웃할까요? 기록은 서버에 남고, 이 기기에서는 지워져요.')) return;
         setBusy(true);
-        setMsg('');
-        try {
-            await fn();
-        } catch {
-            setMsg(step === 'email' ? '코드를 보내지 못했어요. 이메일을 확인하거나 잠시 뒤 다시 해 주세요.' : '코드가 맞지 않거나 시간이 지났어요.');
-        }
+        await disablePush().catch(() => {});
+        if (!(await signOut())) alert('아직 서버에 못 올린 기록이 있어요. 인터넷 연결을 확인한 뒤 다시 해 주세요.');
         setBusy(false);
     };
-
-    if (email)
-        return (
-            <Card title="🔄 기기 간 동기화">
-                <p className="text-[14px]">{email}</p>
-                <p className="text-[12px] text-[#8b95a1] mt-1">
-                    {st.state === 'syncing' ? '맞추는 중…' : st.state === 'error' ? '동기화하지 못했어요. 인터넷이 되면 다시 해요.' : st.at ? `마지막 동기화 ${new Date(st.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}` : '연결됨'}
-                </p>
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                    <Btn kind="soft" onClick={() => syncNow()} disabled={st.state === 'syncing'}>
-                        지금 동기화
-                    </Btn>
-                    <Btn kind="ghost" onClick={() => confirm('로그아웃할까요? 이 기기의 기록은 그대로 남아요.') && disablePush().catch(() => {}).then(signOut)}>
-                        로그아웃
-                    </Btn>
-                </div>
-            </Card>
-        );
-
     return (
-        <Card title="🔄 기기 간 동기화">
-            <p className="text-[13px] text-[#6b7684]">이메일로 로그인하면 휴대폰·컴퓨터 어디서나 같은 기록을 써요. 지금 이 기기의 기록도 합쳐서 올려요.</p>
-            {step === 'email' ? (
-                <form className="flex gap-2 mt-3" onSubmit={(e) => (e.preventDefault(), run(async () => (await sendCode(input.trim()), setStep('code'))))}>
-                    <input type="email" required autoComplete="email" className={inputCls} placeholder="이메일" value={input} onChange={(e) => setInput(e.target.value)} />
-                    <Btn type="submit" className="shrink-0" disabled={busy}>
-                        코드 받기
-                    </Btn>
-                </form>
-            ) : (
-                <form
-                    className="flex gap-2 mt-3"
-                    onSubmit={(e) => (
-                        e.preventDefault(),
-                        run(async () => {
-                            await verifyCode(input.trim(), code.trim());
-                            await syncNow();
-                            // 알림을 켜 둔 기기면 앱이 닫혀도 오게
-                            if (getData().settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'granted') await enablePush().catch(() => {});
-                        })
-                    )}
-                >
-                    <input inputMode="numeric" autoComplete="one-time-code" className={inputCls} placeholder="메일로 온 6자리 코드" value={code} onChange={(e) => setCode(e.target.value)} />
-                    <Btn type="submit" className="shrink-0" disabled={busy || !code.trim()}>
-                        확인
-                    </Btn>
-                </form>
-            )}
-            {step === 'code' && (
-                <button type="button" className="text-[12px] text-[#8b95a1] mt-2 underline" onClick={() => setStep('email')}>
-                    이메일 다시 입력
-                </button>
-            )}
-            {msg && <p className="text-[13px] text-[#e42939] mt-2">{msg}</p>}
+        <Card title="🔄 계정·동기화">
+            <p className="text-[14px]">{syncEmail()}</p>
+            <p className="text-[12px] text-[#8b95a1] mt-1">
+                {st.state === 'syncing' ? '맞추는 중…' : st.state === 'error' ? '동기화하지 못했어요. 인터넷이 되면 다시 해요.' : st.at ? `마지막 동기화 ${new Date(st.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}` : '연결됨'}
+            </p>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+                <Btn kind="soft" onClick={() => syncNow()} disabled={st.state === 'syncing'}>
+                    지금 동기화
+                </Btn>
+                <Btn kind="ghost" onClick={logout} disabled={busy}>
+                    로그아웃
+                </Btn>
+            </div>
         </Card>
     );
 }

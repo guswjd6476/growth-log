@@ -1,15 +1,15 @@
 import { useSyncExternalStore } from 'react';
 import { createClient, type Session } from '@supabase/supabase-js';
-import { getData, normalize, replaceAll, subscribe } from './store';
+import { emptyData, getData, normalize, replaceAll, subscribe } from './store';
 import { mergeData } from './logic';
 import type { Data } from './types';
 
 // 로그인하면 기록 전체를 Supabase 한 줄(user_data)에 올리고 내려받는다.
 // 키가 없으면 sb = null → 지금처럼 이 기기 안에서만 쓴다.
-// Vercel-Supabase 연동이 자동으로 넣는 NEXT_PUBLIC_ 이름도 읽는다 (vite.config.ts envPrefix)
+// 환경 변수가 없으면 이 앱의 Supabase 를 쓴다. 공개용 키라 코드에 둬도 된다 (데이터는 RLS 로 본인 것만 보임)
 const env = import.meta.env;
-const url = (env.VITE_SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL) as string | undefined;
-const key = (env.VITE_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) as string | undefined;
+const url = (env.VITE_SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://zgqmzucqboluhyhcdevr.supabase.co') as string;
+const key = (env.VITE_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_FrmthbiSFai3642G0fGg6A_lTeQxSo5') as string;
 export const sb = url && key ? createClient(url, key) : null;
 
 // base: 마지막으로 맞춘 서버 버전(updated_at), dirty: 아직 못 올린 변경이 있음
@@ -30,7 +30,8 @@ const saveMeta = () => {
 };
 
 let session: Session | null = null;
-let status: { state: 'off' | 'idle' | 'syncing' | 'error'; at?: string } = { state: 'off' };
+// loading: 저장된 로그인 확인 전, off: 로그인 안 됨
+let status: { state: 'loading' | 'off' | 'idle' | 'syncing' | 'error'; at?: string } = { state: sb ? 'loading' : 'off' };
 const listeners = new Set<() => void>();
 const setStatus = (s: typeof status) => {
     status = s;
@@ -138,8 +139,13 @@ export async function verifyCode(email: string, token: string) {
     const { error } = await sb!.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
 }
+// 서버에 다 올린 뒤에만 로그아웃하고 이 기기 기록을 비운다 (다음 계정과 섞이지 않게). 못 올렸으면 false
 export async function signOut() {
+    if (meta.dirty) await sync();
+    if (meta.dirty) return false;
     await sb!.auth.signOut();
     meta = { base: null, dirty: false };
     saveMeta();
+    apply(emptyData());
+    return true;
 }
