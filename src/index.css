@@ -3,14 +3,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --color-brand: #3182f6;
-    --color-brand-soft: #e8f3ff;
+    --color-brand: #3d8bf5;
+    --color-brand-soft: #e4f0fe;
+    --color-accent: #fff35c; /* 노란 알약 버튼 */
     --font-sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', sans-serif;
 }
 
 html,
 body {
-    background: #f2f4f6;
+    background: #f5f8fc;
     color: #191f28;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
@@ -19,6 +20,13 @@ html.dark,
 html.dark body {
     background: #101113;
     color: #e5e8eb;
+}
+/* 위쪽은 하늘색, 아래로 갈수록 흰색 */
+body {
+    background: linear-gradient(180deg, #cfe3fc 0, #e3effd 340px, #f5f8fc 720px) no-repeat, #f5f8fc;
+}
+html.dark body {
+    background: linear-gradient(180deg, #15253d 0, #101113 600px) no-repeat, #101113;
 }
 
 /* 아이폰 홈 바·노치 영역 피하기 */

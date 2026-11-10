@@ -5,6 +5,7 @@ import { today } from '../lib/date';
 import { Bar, Card, PageTitle } from '../components/ui';
 
 const ITEMS: [Route, string, string, string][] = [
+    ['mates', '🤝', '공부 메이트', '초대 코드로 친구 맺기, 서로 오늘 공부·일정 보기'],
     ['habits', '🔥', '습관', '매일·주 n회 체크, 연속 기록, 잔디'],
     ['goals', '🎯', '목표', '연·월·주 목표와 진행률, 변경 이력'],
     ['journal', '📝', '기록', '캡처함, 일기, 주간 회고, #태그 연결'],
@@ -45,10 +46,10 @@ export default function MorePage() {
                         {ITEMS.map(([r, icon, name, desc]) => (
                             <li key={r}>
                                 <button type="button" onClick={() => go(r)} className="w-full flex items-center gap-3 p-3 rounded-xl active:bg-[#f2f4f6] dark:active:bg-[#26292e] text-left">
-                                    <span className="text-[22px]">{icon}</span>
-                                    <span className="flex-1">
-                                        <span className="block text-[15px] font-semibold">{name}</span>
-                                        <span className="block text-[12px] text-[#8b95a1]">{desc}</span>
+                                    <span className="w-12 h-12 shrink-0 rounded-full bg-brand-soft dark:bg-[#1d2c44] grid place-items-center text-[24px]">{icon}</span>
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-[13px] text-[#8b95a1] truncate">{desc}</span>
+                                        <span className="block text-[17px] font-bold">{name}</span>
                                     </span>
                                     <span className="text-[#b0b8c1]">›</span>
                                 </button>

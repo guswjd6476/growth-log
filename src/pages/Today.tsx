@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useData, update } from '../lib/store';
-import { fmtMin, shortDay, today, weekdayName } from '../lib/date';
+import { addDays, fmtMin, shortDay, today, weekStart, weekdayName } from '../lib/date';
 import { addCapture, addTask, cancelTask, moveTomorrow, setDayLine } from '../lib/actions';
-import { habitWeekCount, levelOf, planVsActual, readingCount, staleBooks, staleTasks, weeklyChallenge, xpOf } from '../lib/logic';
-import { Bar, Btn, Card, Empty, inputCls, useAsk } from '../components/ui';
+import { habitWeekCount, levelOf, mateSummary, mateToday, planVsActual, readingCount, staleBooks, staleTasks, weeklyChallenge, xpOf } from '../lib/logic';
+import { Badge, Bar, Btn, Card, Empty, inputCls, useAsk } from '../components/ui';
 import { HabitRow, QuickAdd, TaskRow } from '../components/items';
 import { go } from '../lib/nav';
 
@@ -14,18 +14,22 @@ export default function TodayPage() {
     const tasks = data.tasks.filter((t) => t.date && t.date <= day && (t.date === day || (!t.done && !t.canceled)));
     const habits = data.habits.filter((h) => !h.archived && (h.perWeek >= 7 || h.checks[day] || habitWeekCount(h, day) < h.perWeek));
     const lv = levelOf(xpOf(data));
+    const streak = mateToday(mateSummary(data, day), day).streak;
 
     return (
         <>
-            <div className="flex items-end justify-between px-1 pt-4 pb-3">
+            <div className="flex items-start justify-between gap-2 px-1 pt-7">
                 <div>
-                    <p className="text-sm text-[#6b7684]">
-                        {shortDay(day)} {weekdayName(day)}요일
+                    <h1 className="text-[28px] font-extrabold tracking-tight">
+                        {mode === 'plan' ? '오늘의 계획' : '오늘 뭐 해볼까?'} <Badge>{shortDay(day)} {weekdayName(day)}</Badge>
+                    </h1>
+                    <p className="text-[15px] text-[#6b7684] dark:text-[#9aa1aa] mt-1">
+                        {streak ? `${streak}일째 이어서 성장 중이에요.` : '공부하거나 할 일을 끝내면 출석이 찍혀요.'}
                     </p>
-                    <h1 className="text-[24px] font-bold tracking-tight">{mode === 'plan' ? '오늘의 계획' : '오늘 뭐 해볼까?'}</h1>
                 </div>
                 <ModeSwitch />
             </div>
+            <WeekStamps />
 
             <div className="space-y-3">
                 {mode === 'explore' && (
@@ -94,10 +98,41 @@ export default function TodayPage() {
     );
 }
 
+// 출석체크처럼 이번 주 7일: 공부했거나 할 일을 끝낸 날은 도장
+function WeekStamps() {
+    const data = useData();
+    const day = today();
+    const start = weekStart(day);
+    const did = (d: string) => data.sessions.some((s) => s.date === d && s.minutes > 0) || data.tasks.some((t) => t.done && t.doneAt === d);
+    return (
+        <ol className="grid grid-cols-7 gap-1 px-1 pt-6 pb-6">
+            {Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((d) => {
+                const on = did(d);
+                const isToday = d === day;
+                return (
+                    <li key={d} className="flex flex-col items-center gap-1.5 relative" aria-label={`${shortDay(d)} ${on ? '출석' : '기록 없음'}`}>
+                        {isToday && <span className="absolute -top-3.5 text-brand text-[10px]">▼</span>}
+                        <span
+                            className={`w-11 h-11 rounded-full grid place-items-center text-[22px] border-[3px] ${
+                                on ? 'bg-[#fde7a3] border-brand' : isToday ? 'bg-white dark:bg-[#1b1d21] border-brand' : 'bg-white dark:bg-[#1b1d21] border-white dark:border-[#1b1d21]'
+                            }`}
+                        >
+                            <span className={on ? '' : 'grayscale opacity-30'}>🐣</span>
+                        </span>
+                        <span className={`text-[12px] font-bold ${isToday ? 'text-brand' : on ? 'text-brand/50' : 'text-[#8b95a1]'}`}>
+                            {on && !isToday ? '완료' : isToday ? '오늘' : weekdayName(d)}
+                        </span>
+                    </li>
+                );
+            })}
+        </ol>
+    );
+}
+
 function ModeSwitch() {
     const mode = useData().settings.mode;
     return (
-        <div className="flex rounded-full bg-white dark:bg-[#1b1d21] p-1 text-[12px] font-semibold">
+        <div className="flex shrink-0 rounded-full bg-white/80 dark:bg-[#1b1d21] p-1 text-[12px] font-bold">
             {(
                 [
                     ['plan', '계획형'],

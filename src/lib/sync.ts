@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { createClient, type Session } from '@supabase/supabase-js';
 import { emptyData, getData, normalize, replaceAll, subscribe } from './store';
-import { mergeData } from './logic';
+import { mateSummary, mergeData } from './logic';
+import { today } from './date';
 import type { Data } from './types';
 
 // 로그인하면 기록 전체를 Supabase 한 줄(user_data)에 올리고 내려받는다.
@@ -43,6 +44,7 @@ export const useSync = () =>
         () => status,
     );
 export const syncEmail = () => session?.user.email ?? null;
+export const syncUserId = () => session?.user.id ?? null;
 
 let applying = false;
 function apply(d: Data) {
@@ -67,6 +69,7 @@ function sync(): Promise<void> {
                 again = false;
                 await pullThenPush();
             } while (again);
+            await publishSummary().catch(() => {}); // 메이트 요약은 실패해도 다음 동기화 때 다시
             setStatus({ state: 'idle', at: new Date().toISOString() });
         } catch {
             setStatus({ ...status, state: 'error' });
@@ -103,6 +106,17 @@ async function pullThenPush() {
         again = true;
     }
     saveMeta();
+}
+
+// 메이트에게 보일 오늘 요약 (mate_profiles). 바뀐 게 없으면 안 올린다
+let lastSummary = '';
+async function publishSummary() {
+    const summary = mateSummary(getData(), today());
+    const json = JSON.stringify(summary);
+    if (json === lastSummary) return;
+    const { error } = await sb!.from('mate_profiles').upsert({ user_id: session!.user.id, summary, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    lastSummary = json;
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -145,6 +159,7 @@ export async function signOut() {
     if (meta.dirty) return false;
     await sb!.auth.signOut();
     meta = { base: null, dirty: false };
+    lastSummary = '';
     saveMeta();
     apply(emptyData());
     return true;

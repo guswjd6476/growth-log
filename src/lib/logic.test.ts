@@ -4,6 +4,8 @@ import {
     ensureRoutineTasks,
     habitStreak,
     levelOf,
+    mateSummary,
+    mateToday,
     mergeData,
     planVsActual,
     staleBooks,
@@ -136,5 +138,48 @@ describe('알림', () => {
     });
     it('시간대에 맞춘 날짜·시각', () => {
         expect(localNow(new Date('2026-11-10T15:05:00Z'), 'Asia/Seoul')).toEqual({ day: '2026-11-11', hm: '00:05' });
+    });
+});
+
+describe('공부 메이트 요약', () => {
+    const day = '2026-11-11'; // 수요일
+    const base = () => {
+        const d = emptyData();
+        d.settings.nickname = '현정';
+        d.sessions = [
+            { id: 's1', subject: '영어', date: '2026-11-09', start: '', minutes: 30, kind: 'manual' },
+            { id: 's2', subject: '영어', date: day, start: '', minutes: 20, kind: 'manual' },
+            { id: 's3', subject: '영어', date: '2026-11-01', start: '', minutes: 99, kind: 'manual' }, // 지난주
+        ];
+        d.tasks = [
+            { id: 't1', title: '단어', date: day, done: true, doneAt: day, createdAt: '' },
+            { id: 't2', title: '문법', date: day, done: false, createdAt: '' },
+            { id: 't3', title: '취소', date: day, done: false, canceled: '바빠서', createdAt: '' },
+            { id: 't4', title: '어제', date: '2026-11-10', done: true, doneAt: '2026-11-10', createdAt: '' },
+        ];
+        return d;
+    };
+    it('숫자만 올리고, 켜야 할 일 제목을 넣는다', () => {
+        const s = mateSummary(base(), day);
+        expect(s).toMatchObject({ name: '현정', streak: 3, last: day, todayMin: 20, weekMin: 50, done: 1, total: 2 });
+        expect(s.tasks).toBeUndefined();
+        const d = base();
+        d.settings.shareTasks = true;
+        expect(mateSummary(d, day).tasks).toEqual([{ title: '단어', done: true }, { title: '문법', done: false }]);
+    });
+    it('오늘 아직 안 했으면 어제까지 연속', () => {
+        const d = base();
+        d.sessions = d.sessions.filter((s) => s.date !== day);
+        d.tasks = d.tasks.filter((t) => t.id !== 't1');
+        expect(mateSummary(d, day)).toMatchObject({ streak: 2, last: '2026-11-10' });
+    });
+    it('날이 지난 요약: 오늘 칸은 비우고, 이틀 넘게 쉬면 연속 0', () => {
+        const d = base();
+        d.settings.shareTasks = true;
+        const s = mateSummary(d, day);
+        expect(mateToday(s, day)).toEqual(s);
+        expect(mateToday(s, '2026-11-12')).toMatchObject({ streak: 3, todayMin: 0, total: 0, weekMin: 50, tasks: [] });
+        expect(mateToday(s, '2026-11-13').streak).toBe(0);
+        expect(mateToday(s, '2026-11-16').weekMin).toBe(0); // 다음 주
     });
 });

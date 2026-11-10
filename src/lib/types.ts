@@ -123,6 +123,8 @@ export interface Settings {
     categories: string[];
     lastBackup?: string;
     notify: boolean;
+    nickname: string; // 메이트에게 보이는 이름
+    shareTasks: boolean; // 메이트에게 오늘 할 일 목록도 보여 줌
 }
 
 export interface Data {

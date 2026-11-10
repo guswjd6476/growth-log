@@ -31,6 +31,8 @@ export const emptyData = (): Data => ({
         subjects: ['영어', '자격증', '독서', '코딩'],
         categories: ['공부', '독서', '건강', '일'],
         notify: false,
+        nickname: '',
+        shareTasks: false,
     },
 });
 

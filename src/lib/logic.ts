@@ -241,3 +241,44 @@ export function mergeData(local: Data, remote: Data): Data {
         reviews: { ...remote.reviews, ...local.reviews },
     };
 }
+
+// ── 공부 메이트 ──
+// 메이트에게 올리는 오늘 요약. 할 일 제목은 shareTasks 를 켰을 때만 넣는다
+export interface MateSummary {
+    name: string;
+    day: string; // 이 요약을 만든 날
+    streak: number; // 공부(집중 기록)나 할 일 완료가 이어진 날 수
+    last: string; // 연속이 끝난 날 (오늘 또는 어제여야 살아 있음)
+    todayMin: number;
+    weekMin: number;
+    done: number;
+    total: number;
+    tasks?: { title: string; done: boolean }[];
+}
+
+export function mateSummary(data: Data, day: string): MateSummary {
+    const active = new Set([...data.sessions.filter((s) => s.minutes > 0).map((s) => s.date), ...data.tasks.flatMap((t) => (t.done && t.doneAt ? [t.doneAt] : []))]);
+    const last = active.has(day) ? day : addDays(day, -1);
+    let streak = 0;
+    for (let d = last; active.has(d); d = addDays(d, -1)) streak++;
+    const wk = weekStart(day);
+    const todays = data.tasks.filter((t) => t.date === day && !t.canceled);
+    return {
+        name: data.settings.nickname.trim() || '이름 없음',
+        day,
+        streak,
+        last,
+        todayMin: minutesOn(data.sessions, day),
+        weekMin: data.sessions.filter((s) => s.date >= wk && s.date <= day).reduce((a, s) => a + s.minutes, 0),
+        done: todays.filter((t) => t.done).length,
+        total: todays.length,
+        ...(data.settings.shareTasks ? { tasks: todays.map((t) => ({ title: t.title, done: t.done })) } : {}),
+    };
+}
+
+// 메이트가 며칠 전에 올린 요약을 오늘 기준으로 맞춘다 (날이 바뀌면 오늘 칸은 비우고, 연속은 어제까지 했을 때만)
+export function mateToday(s: MateSummary, day: string): MateSummary {
+    const streak = s.last >= addDays(day, -1) ? s.streak : 0;
+    if (s.day === day) return { ...s, streak };
+    return { ...s, streak, todayMin: 0, done: 0, total: 0, tasks: s.tasks && [], weekMin: weekStart(s.day) === weekStart(day) ? s.weekMin : 0 };
+}

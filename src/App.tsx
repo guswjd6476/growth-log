@@ -15,6 +15,7 @@ import JournalPage from './pages/Journal';
 import StatsPage from './pages/Stats';
 import SettingsPage from './pages/Settings';
 import LoginPage from './pages/Login';
+import MatesPage from './pages/Mates';
 import { syncEmail, useSync } from './lib/sync';
 
 const PAGES: Record<Route, () => React.JSX.Element> = {
@@ -28,6 +29,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
     journal: JournalPage,
     stats: StatsPage,
     settings: SettingsPage,
+    mates: MatesPage,
 };
 const TABS: { route: Route; label: string; icon: string }[] = [
     { route: 'today', label: '오늘', icon: '☀️' },
@@ -36,7 +38,7 @@ const TABS: { route: Route; label: string; icon: string }[] = [
     { route: 'books', label: '독서', icon: '📚' },
     { route: 'more', label: '더보기', icon: '☰' },
 ];
-const MORE: Route[] = ['more', 'habits', 'goals', 'journal', 'stats', 'settings'];
+const MORE: Route[] = ['more', 'habits', 'goals', 'journal', 'stats', 'settings', 'mates'];
 
 const readRoute = (): Route => {
     const r = location.hash.replace('#/', '') as Route;
@@ -111,7 +113,7 @@ export default function App() {
                 {saveError && <div className="mt-3 rounded-xl bg-[#ffeeee] text-[#e42939] text-sm p-3">{saveError}</div>}
                 <Page />
             </main>
-            <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#1b1d21]/95 backdrop-blur border-t border-[#eef0f2] dark:border-[#26292e] safe-bottom">
+            <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#1b1d21]/95 backdrop-blur rounded-t-[28px] shadow-[0_-4px_24px_rgba(61,139,245,0.10)] dark:shadow-none safe-bottom">
                 <div className="mx-auto max-w-xl grid grid-cols-5">
                     {TABS.map((t) => (
                         <button
@@ -119,8 +121,8 @@ export default function App() {
                             type="button"
                             onClick={() => go(t.route)}
                             aria-current={activeTab === t.route ? 'page' : undefined}
-                            className={`flex flex-col items-center gap-0.5 pt-2 pb-1 text-[11px] font-semibold ${
-                                activeTab === t.route ? 'text-[#191f28] dark:text-white' : 'text-[#b0b8c1] grayscale'
+                            className={`flex flex-col items-center gap-1 pt-3 pb-1 text-[11px] font-bold ${
+                                activeTab === t.route ? 'text-brand' : 'text-[#b0b8c1] grayscale opacity-70'
                             }`}
                         >
                             <span className="text-[20px] leading-none">{t.icon}</span>
