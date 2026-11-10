@@ -42,19 +42,6 @@ npm run build    # 배포용 빌드 (dist/)
    ```
    예약 자체는 `supabase/migrations/0002_cron.sql`이 만든다.
 
-## 구글·카카오·네이버 로그인
-
-`api/auth.ts`가 처리합니다 (메일 안 보냄). 세 곳 모두 **돌아올 주소(Redirect URI)** 는 `https://<내 Vercel 주소>/api/auth` 하나입니다.
-Vercel 환경 변수에 `SUPABASE_SERVICE_ROLE_KEY`(Supabase → Project Settings → API Keys → secret/service_role)가 있어야 합니다. Vercel 연동으로 만든 프로젝트면 이미 있습니다.
-
-| 회사 | 어디서 | Vercel 환경 변수 |
-|---|---|---|
-| 카카오 | [Kakao Developers](https://developers.kakao.com) → 내 애플리케이션 → 카카오 로그인 **활성화 ON**, Redirect URI 등록 (동의항목은 없어도 됨) | `KAKAO_REST_KEY` (책 검색과 같은 키), 보안 → Client Secret을 켰으면 `KAKAO_CLIENT_SECRET` |
-| 네이버 | [Naver Developers](https://developers.naver.com/apps) → 애플리케이션 등록 → 사용 API **네이버 로그인**, 서비스 URL·Callback URL 등록. 검수 전에는 **멤버관리**에 넣은 계정만 로그인됨 | `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` |
-| 구글 | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth 동의 화면 만들기 → 사용자 인증 정보 → OAuth 클라이언트 ID(웹 애플리케이션), 승인된 리디렉션 URI 등록 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-
-환경 변수를 넣은 뒤 **재배포**해야 반영됩니다. 키가 없는 회사 버튼을 누르면 "로그인에 실패했어요"가 뜹니다.
-
 로컬에서 쓰려면 `.env.example`을 `.env`로 복사해 값을 채웁니다.
 
 ## 휴대폰에 설치

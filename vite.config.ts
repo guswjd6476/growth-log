@@ -11,7 +11,7 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             includeAssets: ['apple-touch-icon.png', 'favicon.png'],
-            workbox: { importScripts: ['push-sw.js'], navigateFallbackDenylist: [/^\/api\//] }, // 로그인 서버 함수로 가는 이동은 캐시된 화면으로 가로채지 않게
+            workbox: { importScripts: ['push-sw.js'] },
             manifest: {
                 name: '성장일지',
                 short_name: '성장일지',

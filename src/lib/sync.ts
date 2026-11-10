@@ -42,24 +42,7 @@ export const useSync = () =>
         (l) => (listeners.add(l), () => listeners.delete(l)),
         () => status,
     );
-// 로그인한 계정 이름. 카카오·네이버·구글(메일 비공개)은 가짜 주소라 회사 이름으로 보여 준다
-const NAMES: Record<string, string> = { kakao: '카카오', naver: '네이버', google: '구글' };
-export const syncEmail = () => {
-    const e = session?.user.email;
-    if (!session) return null;
-    const m = /^(kakao|naver|google)_.*@users\.growth-log\.example$/.exec(e ?? '');
-    return m ? `${NAMES[m[1]]} 계정으로 로그인됨` : (e ?? '로그인됨');
-};
-
-// 구글·카카오·네이버 로그인 버튼 → 서버 함수(api/auth.ts)가 처리하고 /#login=토큰 으로 돌려보낸다
-export const socialLogin = (p: 'google' | 'kakao' | 'naver') => location.assign(`/api/auth?p=${p}`);
-export const loginError = /^#login-error=(\w+)/.exec(location.hash)?.[1] ?? null;
-async function finishSocialLogin() {
-    const token = /^#login=([\w-]+)/.exec(location.hash)?.[1];
-    if (!token && !loginError) return;
-    history.replaceState(null, '', '/#/today'); // 토큰을 주소창·기록에 남기지 않는다
-    if (token) await sb!.auth.verifyOtp({ token_hash: token, type: 'email' }).catch(() => {});
-}
+export const syncEmail = () => session?.user.email ?? null;
 
 let applying = false;
 function apply(d: Data) {
@@ -142,7 +125,6 @@ export function startSync() {
         } else if (event === 'INITIAL_SESSION') setTimeout(sync);
         else if (status.state === 'off') setStatus({ state: 'idle' });
     });
-    finishSocialLogin();
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && sync());
     addEventListener('online', () => sync());
 }
