@@ -43,8 +43,17 @@ export const useSync = () =>
         (l) => (listeners.add(l), () => listeners.delete(l)),
         () => status,
     );
-export const syncEmail = () => session?.user.email ?? null;
-export const syncUserId = () => session?.user.id ?? null;
+// 기기에 저장된 로그인. supabase 가 진짜로 로그아웃시키면(로그아웃·토큰 무효) 지워지고,
+// 인터넷이 안 돼서 연장만 못 했을 때는 남아 있다 → 그때는 로그인 화면 대신 기록을 그대로 보여 준다
+const storedUser = (): { id?: string; email?: string } | null => {
+    try {
+        return JSON.parse(localStorage.getItem(`sb-${new URL(url).hostname.split('.')[0]}-auth-token`) ?? 'null')?.user ?? null;
+    } catch {
+        return null;
+    }
+};
+export const syncEmail = () => session?.user.email ?? storedUser()?.email ?? null;
+export const syncUserId = () => session?.user.id ?? storedUser()?.id ?? null;
 
 let applying = false;
 function apply(d: Data) {
@@ -132,15 +141,16 @@ export function startSync() {
     sb.auth.onAuthStateChange((event, s) => {
         const was = session;
         session = s;
-        if (!s) return setStatus({ state: 'off' });
+        if (!s) return setStatus({ state: storedUser() ? 'error' : 'off' }); // 연장 실패면 supabase 가 30초마다 다시 시도한다
         if (event === 'SIGNED_IN' && !was) {
             if (!meta.base) meta.dirty = true; // 이 기기의 기록도 합쳐서 올린다
             setTimeout(sync); // 이 콜백 안에서 바로 supabase 를 부르면 멈출 수 있어서 한 박자 뒤에
-        } else if (event === 'INITIAL_SESSION') setTimeout(sync);
+        } else if (!was) setTimeout(sync); // 앱 시작, 또는 연장 실패 뒤 다시 연결됨
         else if (status.state === 'off') setStatus({ state: 'idle' });
     });
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && sync());
     addEventListener('online', () => sync());
+    navigator.storage?.persist?.(); // 브라우저가 저장 공간을 정리할 때 로그인·기록을 지우지 않게 요청
 }
 
 export const syncNow = sync;
