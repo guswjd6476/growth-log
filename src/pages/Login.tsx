@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { sb, sendCode, syncNow, verifyCode } from '../lib/sync';
+import { loginError, sb, sendCode, socialLogin, syncNow, verifyCode } from '../lib/sync';
 import { enablePush } from '../lib/push';
 import { getData } from '../lib/store';
 import { Btn, inputCls } from '../components/ui';
@@ -9,7 +9,8 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
     const [step, setStep] = useState<'email' | 'code'>('email');
-    const [msg, setMsg] = useState('');
+    const [msg, setMsg] = useState(loginError ? `${{ google: '구글', kakao: '카카오', naver: '네이버' }[loginError] ?? ''} 로그인에 실패했어요. 다시 해 주세요.` : '');
+    const [showEmail, setShowEmail] = useState(false);
     const [busy, setBusy] = useState(false);
 
     const run = async (fn: () => Promise<void>, fail: string) => {
@@ -45,13 +46,31 @@ export default function LoginPage() {
                 </div>
                 {!sb ? (
                     <p className="text-[14px] text-[#e42939] text-center">서버 설정이 안 돼 있어요. 관리자에게 Supabase 환경 변수를 확인해 달라고 해 주세요.</p>
+                ) : !showEmail ? (
+                    <div className="space-y-2">
+                        <button type="button" onClick={() => socialLogin('kakao')} className="w-full rounded-xl py-3 font-semibold text-[15px] bg-[#FEE500] text-[#191919]">
+                            카카오로 시작하기
+                        </button>
+                        <button type="button" onClick={() => socialLogin('naver')} className="w-full rounded-xl py-3 font-semibold text-[15px] bg-[#03C75A] text-white">
+                            네이버로 시작하기
+                        </button>
+                        <button type="button" onClick={() => socialLogin('google')} className="w-full rounded-xl py-3 font-semibold text-[15px] bg-white text-[#191f28] border border-[#e5e8eb]">
+                            구글로 시작하기
+                        </button>
+                        <button type="button" onClick={() => setShowEmail(true)} className="w-full text-[13px] text-[#8b95a1] underline pt-2">
+                            이메일로 로그인
+                        </button>
+                        <p className="text-[12px] text-[#8b95a1] text-center pt-1">처음이면 자동으로 가입돼요. 이 기기에 있던 기록도 합쳐서 올려요.</p>
+                    </div>
                 ) : step === 'email' ? (
                     <form className="space-y-2" onSubmit={(e) => (e.preventDefault(), send())}>
                         <input type="email" required autoComplete="email" className={inputCls} placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)} />
                         <Btn type="submit" className="w-full" disabled={busy}>
                             로그인 코드 받기
                         </Btn>
-                        <p className="text-[12px] text-[#8b95a1] text-center">처음이면 자동으로 가입돼요. 이 기기에 있던 기록도 합쳐서 올려요.</p>
+                        <button type="button" onClick={() => setShowEmail(false)} className="w-full text-[13px] text-[#8b95a1] underline pt-2">
+                            다른 방법으로 로그인
+                        </button>
                     </form>
                 ) : (
                     <form className="space-y-2" onSubmit={(e) => (e.preventDefault(), verify())}>
