@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getData, update, useData } from '../lib/store';
 import { addSession } from '../lib/actions';
 import { pushOn } from '../lib/push';
-import { fmtMin, today } from '../lib/date';
+import { addDays, fmtMin, today } from '../lib/date';
 import { minutesBySubject } from '../lib/logic';
 import { Bar, Btn, Card, Chip, Empty, inputCls, PageTitle } from '../components/ui';
 import type { TimerState } from '../lib/types';
@@ -112,7 +112,8 @@ export default function FocusPage() {
 // 오늘 과목별 공부 계획 (계획 대비 실제의 기준)
 function TodayPlan() {
     const data = useData();
-    const day = today();
+    const [tomorrow, setTomorrow] = useState(false);
+    const day = tomorrow ? addDays(today(), 1) : today();
     const plan = data.plans[day] ?? {};
     const actual = minutesBySubject(data.sessions, [day]);
     const setPlan = (subject: string, min: number) =>
@@ -127,7 +128,15 @@ function TodayPlan() {
             if (prev) d.plans[day] = { ...d.plans[prev] };
         });
     return (
-        <Card title="오늘 공부 계획" extra={<Btn small kind="ghost" onClick={copyYesterday}>지난 계획 복사</Btn>}>
+        <Card title={`${tomorrow ? '내일' : '오늘'} 공부 계획`} extra={<Btn small kind="ghost" onClick={copyYesterday}>지난 계획 복사</Btn>}>
+            <div className="flex gap-2 mb-3">
+                <Chip active={!tomorrow} onClick={() => setTomorrow(false)}>
+                    오늘
+                </Chip>
+                <Chip active={tomorrow} onClick={() => setTomorrow(true)}>
+                    내일
+                </Chip>
+            </div>
             <ul className="space-y-3">
                 {data.settings.subjects.map((sub) => (
                     <li key={sub}>

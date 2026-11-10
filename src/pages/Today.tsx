@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useData, update } from '../lib/store';
 import { addDays, fmtMin, shortDay, today, weekStart, weekdayName } from '../lib/date';
 import { addCapture, addTask, cancelTask, moveTomorrow, setDayLine } from '../lib/actions';
-import { habitWeekCount, levelOf, mateSummary, mateToday, planVsActual, readingCount, staleBooks, staleTasks, weeklyChallenge, xpOf } from '../lib/logic';
+import { byTime, habitWeekCount, levelOf, mateSummary, mateToday, planVsActual, readingCount, staleBooks, staleTasks, weeklyChallenge, xpOf } from '../lib/logic';
 import { Badge, Bar, Btn, Card, Empty, inputCls, useAsk } from '../components/ui';
 import { HabitRow, QuickAdd, TaskRow } from '../components/items';
 import { go } from '../lib/nav';
@@ -52,7 +52,7 @@ export default function TodayPage() {
                     <QuickAdd placeholder="오늘 할 일 추가" onAdd={(title) => addTask({ title })} />
                     {tasks.length ? (
                         <ul className="mt-1 divide-y divide-[#f2f4f6] dark:divide-[#26292e]">
-                            {tasks.filter((t) => !t.canceled).map((t) => (
+                            {tasks.filter((t) => !t.canceled).sort(byTime).map((t) => (
                                 <TaskRow key={t.id} t={t} />
                             ))}
                         </ul>
@@ -60,6 +60,8 @@ export default function TodayPage() {
                         <Empty>오늘 할 일이 없어요</Empty>
                     )}
                 </Card>
+
+                <TomorrowCard />
 
                 <Card title="습관" extra={<button type="button" className="text-sm text-brand font-semibold" onClick={() => go('habits')}>관리</button>}>
                     {habits.length ? (
@@ -149,6 +151,27 @@ function ModeSwitch() {
                 </button>
             ))}
         </div>
+    );
+}
+
+// 내일 할 일 미리 적기. 고정 일정(알바 등)도 같이 보인다
+function TomorrowCard() {
+    const data = useData();
+    const day = addDays(today(), 1);
+    const tasks = data.tasks.filter((t) => t.date === day && !t.canceled).sort(byTime);
+    return (
+        <Card title={`내일 계획 · ${shortDay(day)} ${weekdayName(day)}`} extra={<button type="button" className="text-sm text-brand font-semibold" onClick={() => go('focus')}>공부 계획</button>}>
+            <QuickAdd placeholder="내일 할 일 추가" onAdd={(title) => addTask({ title, date: day })} />
+            {tasks.length ? (
+                <ul className="mt-1 divide-y divide-[#f2f4f6] dark:divide-[#26292e]">
+                    {tasks.map((t) => (
+                        <TaskRow key={t.id} t={t} />
+                    ))}
+                </ul>
+            ) : (
+                <Empty>내일 할 일을 미리 적어 두면 아침이 가벼워요</Empty>
+            )}
+        </Card>
     );
 }
 

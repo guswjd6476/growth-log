@@ -5,6 +5,8 @@ export interface Task {
     title: string;
     date: string | null; // 하기로 한 날 (null 이면 언젠가)
     due?: string | null; // 마감일
+    time?: string; // 시작 'HH:MM'
+    endTime?: string; // 끝 'HH:MM'
     done: boolean;
     doneAt?: string;
     canceled?: string; // 취소 사유 (포기 기록)
@@ -20,6 +22,8 @@ export interface Routine {
     id: string;
     title: string;
     days: number[]; // 0=일 ~ 6=토
+    time?: string; // 알바 같은 고정 일정의 시작·끝 'HH:MM'
+    endTime?: string;
     category?: string;
     planMin?: number;
     since: string; // 이날부터 자동 생성

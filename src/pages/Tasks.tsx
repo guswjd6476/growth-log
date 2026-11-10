@@ -3,7 +3,8 @@ import { refreshDay, uid, update, useData } from '../lib/store';
 import { addTask } from '../lib/actions';
 import { addDays, shortDay, today, weekdayName } from '../lib/date';
 import { Btn, Card, Chip, Empty, inputCls, label, PageTitle, Sheet } from '../components/ui';
-import { TaskRow } from '../components/items';
+import { TaskRow, TimeFields } from '../components/items';
+import { byTime, timeLabel } from '../lib/logic';
 import type { Task } from '../lib/types';
 
 type Filter = 'today' | 'upcoming' | 'someday' | 'done' | 'dropped' | 'routine';
@@ -13,7 +14,7 @@ const FILTERS: [Filter, string][] = [
     ['someday', '언젠가'],
     ['done', '완료'],
     ['dropped', '포기'],
-    ['routine', '루틴'],
+    ['routine', '고정 일정'],
 ];
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -43,7 +44,7 @@ export default function TasksPage() {
     };
     const list = data.tasks
         .filter(pick)
-        .sort((a, b) => (filter === 'done' ? (b.doneAt ?? '').localeCompare(a.doneAt ?? '') : (a.date ?? '9').localeCompare(b.date ?? '9')));
+        .sort((a, b) => (filter === 'done' ? (b.doneAt ?? '').localeCompare(a.doneAt ?? '') : (a.date ?? '9').localeCompare(b.date ?? '9') || byTime(a, b)));
 
     // 예정은 날짜별로 묶어서
     const groups = filter === 'upcoming' ? [...new Set(list.map((t) => t.date!))] : [null];
@@ -103,7 +104,7 @@ export default function TasksPage() {
 function AddTaskSheet({ open, onClose, defaultDate }: { open: boolean; onClose: () => void; defaultDate: string | null }) {
     const data = useData();
     const day = today();
-    const [f, setF] = useState({ title: '', date: defaultDate ?? '', due: '', category: '', planMin: '', goalId: '' });
+    const [f, setF] = useState({ title: '', date: defaultDate ?? '', time: '', endTime: '', due: '', category: '', planMin: '', goalId: '' });
     const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
     const goals = data.goals.filter((g) => !g.done && !g.dropped);
     const save = () => {
@@ -111,12 +112,14 @@ function AddTaskSheet({ open, onClose, defaultDate }: { open: boolean; onClose: 
         addTask({
             title: f.title.trim(),
             date: f.date || null,
+            time: f.time || undefined,
+            endTime: f.endTime || undefined,
             due: f.due || null,
             category: f.category || undefined,
             planMin: Number(f.planMin) || undefined,
             goalId: f.goalId || undefined,
         });
-        setF({ ...f, title: '' });
+        setF({ ...f, title: '', time: '', endTime: '' });
         onClose();
     };
     return (
@@ -135,6 +138,7 @@ function AddTaskSheet({ open, onClose, defaultDate }: { open: boolean; onClose: 
                 ))}
                 <input type="date" className={`${inputCls} !w-auto !py-1.5`} value={f.date} onChange={set('date')} />
             </div>
+            <TimeFields time={f.time} endTime={f.endTime} onChange={(k, v) => setF({ ...f, [k]: v })} />
             <div className="grid grid-cols-2 gap-2">
                 <div>
                     <label className={label}>마감일</label>
@@ -172,25 +176,27 @@ function AddTaskSheet({ open, onClose, defaultDate }: { open: boolean; onClose: 
     );
 }
 
-// 요일마다 자동으로 생기는 할 일
+// 요일마다 자동으로 생기는 할 일 (알바 같은 고정 일정도)
 function Routines() {
     const data = useData();
     const [title, setTitle] = useState('');
     const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
     const [planMin, setPlanMin] = useState('');
     const [category, setCategory] = useState('');
+    const [time, setTime] = useState({ time: '', endTime: '' });
     const add = () => {
         if (!title.trim() || !days.length) return;
         update((d) => {
-            d.routines.push({ id: uid(), title: title.trim(), days, planMin: Number(planMin) || undefined, category: category || undefined, since: today() });
+            d.routines.push({ id: uid(), title: title.trim(), days, time: time.time || undefined, endTime: time.endTime || undefined, planMin: Number(planMin) || undefined, category: category || undefined, since: today() });
         });
         refreshDay(); // 오늘 요일이면 바로 오늘 할 일에
         setTitle('');
+        setTime({ time: '', endTime: '' });
     };
     return (
         <div className="space-y-3">
-            <Card title="루틴 만들기">
-                <input className={inputCls} placeholder="예: 영어 단어 30개" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Card title="고정 일정·루틴 만들기">
+                <input className={inputCls} placeholder="예: 카페 알바, 영어 단어 30개" value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="flex gap-1.5 mt-3">
                     {DAYS.map((l, i) => (
                         <button
@@ -204,6 +210,7 @@ function Routines() {
                         </button>
                     ))}
                 </div>
+                <TimeFields time={time.time} endTime={time.endTime} onChange={(k, v) => setTime({ ...time, [k]: v })} />
                 <div className="grid grid-cols-2 gap-2 mt-2">
                     <input type="number" inputMode="numeric" className={inputCls} placeholder="예상 분" value={planMin} onChange={(e) => setPlanMin(e.target.value)} />
                     <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -214,31 +221,32 @@ function Routines() {
                     </select>
                 </div>
                 <Btn className="w-full mt-3" onClick={add} disabled={!title.trim() || !days.length}>
-                    루틴 추가
+                    추가
                 </Btn>
-                <p className="text-[12px] text-[#8b95a1] mt-2">고른 요일마다 그날 할 일에 자동으로 들어갑니다.</p>
+                <p className="text-[12px] text-[#8b95a1] mt-2">고른 요일마다 그날 할 일에 시간과 함께 자동으로 들어갑니다.</p>
             </Card>
-            <Card title="내 루틴">
+            <Card title="내 고정 일정·루틴">
                 {data.routines.length ? (
                     <ul className="divide-y divide-[#f2f4f6] dark:divide-[#26292e]">
-                        {data.routines.map((r) => (
+                        {[...data.routines].sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99')).map((r) => (
                             <li key={r.id} className="flex items-center gap-3 py-2.5">
                                 <div className="flex-1 min-w-0">
                                     <div className="text-[15px]">{r.title}</div>
                                     <div className="text-[12px] text-[#8b95a1]">
+                                        {r.time && `${timeLabel(r)} · `}
                                         {r.days.length === 7 ? '매일' : r.days.map((i) => DAYS[i]).join('·')}
                                         {r.planMin && ` · ${r.planMin}분`}
                                         {r.category && ` · ${r.category}`}
                                     </div>
                                 </div>
-                                <Btn small kind="ghost" onClick={() => confirm('루틴을 지울까요? 이미 생긴 할 일은 남습니다.') && update((d) => void (d.routines = d.routines.filter((x) => x.id !== r.id)))}>
+                                <Btn small kind="ghost" onClick={() => confirm('지울까요? 이미 생긴 할 일은 남습니다.') && update((d) => void (d.routines = d.routines.filter((x) => x.id !== r.id)))}>
                                     삭제
                                 </Btn>
                             </li>
                         ))}
                     </ul>
                 ) : (
-                    <Empty>아침 루틴, 요일별 공부 시간표를 만들어 보세요</Empty>
+                    <Empty>알바, 수업 같은 고정 일정이나 요일별 공부 루틴을 만들어 보세요</Empty>
                 )}
             </Card>
         </div>

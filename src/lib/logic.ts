@@ -19,10 +19,16 @@ export function ensureRoutineTasks(data: Data, day: string): Data {
         category: r.category,
         planMin: r.planMin,
         routineId: r.id,
+        time: r.time,
+        endTime: r.endTime,
         createdAt: new Date().toISOString(),
     }));
     return { ...data, tasks: [...data.tasks, ...added] };
 }
+
+// 시간 있는 일은 시간 순으로 먼저, 나머지는 그대로
+export const byTime = (a: Task, b: Task) => (a.time ?? '99').localeCompare(b.time ?? '99');
+export const timeLabel = (t: { time?: string; endTime?: string }) => (t.time ? `⏰ ${t.time}${t.endTime ? `~${t.endTime}` : ''}` : '');
 
 // ── 습관 ──
 export const habitWeekCount = (h: Habit, day: string) => {

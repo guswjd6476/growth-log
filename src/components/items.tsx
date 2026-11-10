@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { Habit, Task } from '../lib/types';
 import { cancelTask, deleteTask, moveTask, moveTomorrow, restoreTask, toggleHabit, toggleTask } from '../lib/actions';
-import { habitStreak, habitWeekCount } from '../lib/logic';
+import { habitStreak, habitWeekCount, timeLabel } from '../lib/logic';
 import { addDays, shortDay, today } from '../lib/date';
-import { Btn, inputCls, Sheet, useAsk } from './ui';
-import { useData } from '../lib/store';
+import { Btn, inputCls, label, Sheet, useAsk } from './ui';
+import { update, useData } from '../lib/store';
 
 export function Check({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
     return (
@@ -31,11 +31,12 @@ export function TaskRow({ t }: { t: Task }) {
     const day = today();
     const overdue = !t.done && !t.canceled && t.date && t.date < day;
     const meta = [
+        timeLabel(t),
         t.category,
         t.planMin && `${t.planMin}분`,
         t.due && `마감 ${shortDay(t.due)}`,
         goal && `🎯 ${goal.title}`,
-        t.routineId && '루틴',
+        t.routineId && '반복',
         (t.moved ?? 0) >= 2 && `${t.moved}번 미룸`,
     ].filter(Boolean);
 
@@ -55,7 +56,8 @@ export function TaskRow({ t }: { t: Task }) {
                 )}
             </button>
             <Sheet open={open} onClose={() => setOpen(false)} title={t.title}>
-                <div className="grid grid-cols-2 gap-2">
+                <TimeFields time={t.time} endTime={t.endTime} onChange={(k, v) => update((d) => void (d.tasks.find((x) => x.id === t.id)![k] = v || undefined))} />
+                <div className="grid grid-cols-2 gap-2 mt-4">
                     <Btn kind="soft" onClick={() => (moveTask(t.id, today()), setOpen(false))}>
                         오늘 하기
                     </Btn>
@@ -118,6 +120,22 @@ export function HabitRow({ h, day = today() }: { h: Habit; day?: string }) {
                 </span>
             )}
         </li>
+    );
+}
+
+// 시작·끝 시간 (둘 다 선택)
+export function TimeFields({ time, endTime, onChange }: { time?: string; endTime?: string; onChange: (k: 'time' | 'endTime', v: string) => void }) {
+    return (
+        <div className="grid grid-cols-2 gap-2">
+            <div>
+                <label className={label}>시작 시간</label>
+                <input type="time" className={inputCls} value={time ?? ''} onChange={(e) => onChange('time', e.target.value)} />
+            </div>
+            <div>
+                <label className={label}>끝 시간</label>
+                <input type="time" className={inputCls} value={endTime ?? ''} onChange={(e) => onChange('endTime', e.target.value)} />
+            </div>
+        </div>
     );
 }
 

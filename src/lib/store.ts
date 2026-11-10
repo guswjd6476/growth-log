@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Data } from './types';
 import { ensureRoutineTasks } from './logic';
-import { today } from './date';
+import { addDays, today } from './date';
 
 // 모든 기록은 이 기기 안(localStorage)에 저장한다. 오프라인에서도 그대로 쓴다.
 // 로그인하면 sync.ts 가 이 기록을 서버와 맞춘다
@@ -51,7 +51,7 @@ function load(): Data {
     }
 }
 
-let state: Data = ensureRoutineTasks(load(), today());
+let state: Data = ensureRoutineTasks(ensureRoutineTasks(load(), today()), addDays(today(), 1));
 const listeners = new Set<() => void>();
 let saveError = '';
 
@@ -82,8 +82,9 @@ export function replaceAll(d: Data) {
 }
 
 // 날짜가 바뀌면 오늘 루틴 할 일을 깔아준다
+// 오늘과 내일 고정 일정을 깐다 (내일 것은 내일 계획에 미리 보이게. id 가 날짜별로 같아서 겹치지 않음)
 export function refreshDay() {
-    const next = ensureRoutineTasks(state, today());
+    const next = ensureRoutineTasks(ensureRoutineTasks(state, today()), addDays(today(), 1));
     if (next !== state) {
         state = next;
         save();

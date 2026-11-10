@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { emptyData } from './store';
 import {
+    byTime,
     ensureRoutineTasks,
+    timeLabel,
     habitStreak,
     levelOf,
     mateSummary,
@@ -15,7 +17,7 @@ import {
 } from './logic';
 import { addDays, weekStart } from './date';
 import { localNow, reminders, timerDone } from '../../supabase/functions/_shared/reminders';
-import type { Book, Habit } from './types';
+import type { Book, Habit, Task } from './types';
 
 const habit = (perWeek: number, days: string[]): Habit => ({
     id: 'h',
@@ -47,6 +49,15 @@ describe('루틴', () => {
         expect(a.tasks).toHaveLength(1);
         expect(ensureRoutineTasks(a, '2026-11-10')).toBe(a);
         expect(ensureRoutineTasks(d, '2026-11-11').tasks).toHaveLength(0);
+    });
+    it('고정 일정은 시간도 함께 깔리고, 시간 순으로 정렬', () => {
+        const d = emptyData();
+        d.routines.push({ id: 'job', title: '카페 알바', days: [2], time: '18:00', endTime: '22:00', since: '2026-11-01' });
+        const [t] = ensureRoutineTasks(d, '2026-11-10').tasks;
+        expect(t).toMatchObject({ time: '18:00', endTime: '22:00' });
+        expect(timeLabel(t)).toBe('⏰ 18:00~22:00');
+        const tasks = [{ title: '시간 없음' }, t, { title: '아침', time: '09:30' }] as Task[];
+        expect(tasks.sort(byTime).map((x) => x.title)).toEqual(['아침', '카페 알바', '시간 없음']);
     });
 });
 
