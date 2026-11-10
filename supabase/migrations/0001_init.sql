@@ -5,6 +5,7 @@ create table if not exists public.user_data (
     updated_at timestamptz not null default now()
 );
 alter table public.user_data enable row level security;
+drop policy if exists "본인 기록만" on public.user_data;
 create policy "본인 기록만" on public.user_data for all
     using (user_id = auth.uid()) with check (user_id = auth.uid());
 
@@ -17,6 +18,7 @@ create table if not exists public.push_subs (
     created_at timestamptz not null default now()
 );
 alter table public.push_subs enable row level security;
+drop policy if exists "본인 구독만" on public.push_subs;
 create policy "본인 구독만" on public.push_subs for all
     using (user_id = auth.uid()) with check (user_id = auth.uid());
 

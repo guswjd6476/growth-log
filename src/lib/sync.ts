@@ -6,8 +6,10 @@ import type { Data } from './types';
 
 // 로그인하면 기록 전체를 Supabase 한 줄(user_data)에 올리고 내려받는다.
 // 키가 없으면 sb = null → 지금처럼 이 기기 안에서만 쓴다.
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Vercel-Supabase 연동이 자동으로 넣는 NEXT_PUBLIC_ 이름도 읽는다 (vite.config.ts envPrefix)
+const env = import.meta.env;
+const url = (env.VITE_SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL) as string | undefined;
+const key = (env.VITE_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) as string | undefined;
 export const sb = url && key ? createClient(url, key) : null;
 
 // base: 마지막으로 맞춘 서버 버전(updated_at), dirty: 아직 못 올린 변경이 있음

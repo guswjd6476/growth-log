@@ -2,7 +2,8 @@ import { sb, syncEmail } from './sync';
 
 // 앱이 닫혀 있어도 오는 알림: 이 기기 구독을 서버(push_subs)에 올리면 서버가 1분마다 보낸다.
 // 로그인해서 기록이 서버에 있어야 쓸 수 있다.
-const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+// 공개 키라 코드에 둬도 된다 (짝인 비공개 키는 Supabase secrets 에만 있음)
+const vapid = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? 'BDYnh5aL2lWJZa2PzthLwHlI3yuFktRg_WtJa9_tlb0sKeaeMtKKT15PXjA0uiA5l4hPO3TovpfeYStwP9xcP68';
 const FLAG = 'growth-log:push';
 
 export const pushAvailable = () => !!(sb && vapid && syncEmail() && 'serviceWorker' in navigator && 'PushManager' in window);

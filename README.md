@@ -26,9 +26,9 @@ npm run build    # 배포용 빌드 (dist/)
 3. **Authentication → Emails → Magic Link 템플릿**에 `{{ .Token }}` 를 넣기 (6자리 코드로 로그인. 링크 방식은 홈 화면 앱이 아니라 Safari로 열려서 안 씀)
    - 예: `<h2>성장일지 로그인 코드</h2><p>{{ .Token }}</p>`
 4. 푸시용 키 만들기: `npx web-push generate-vapid-keys`
-5. Vercel 환경 변수 (Project Settings → API에서 복사)
-   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`(위 Public Key)
-   - 넣은 뒤 **재배포**해야 반영됩니다.
+5. Vercel 환경 변수: Vercel의 Supabase 연동으로 만든 프로젝트면 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`가 자동으로 들어가 있어 할 일 없음
+   - 아니면 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`를 직접 추가 (Project Settings → API에서 복사)
+   - 푸시 공개 키는 `src/lib/push.ts`에 들어 있음. 키를 새로 만들면 `VITE_VAPID_PUBLIC_KEY`로 덮어쓰기
 6. 알림 보내는 함수 배포 ([Supabase CLI](https://supabase.com/docs/guides/cli) 필요)
    ```bash
    npx supabase login
@@ -36,17 +36,12 @@ npm run build    # 배포용 빌드 (dist/)
    npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:<내 이메일> CRON_SECRET=<아무 긴 문자열>
    npx supabase functions deploy remind --no-verify-jwt
    ```
-7. 1분마다 함수 부르기: **SQL Editor**에서 실행 (`<ref>`, `<CRON_SECRET>` 바꾸기)
+7. 1분마다 함수 부르기: `supabase/seed.sql`에 아래 두 줄을 넣고 `npx supabase db push --remote --include-seed` (seed.sql은 git에 안 올림)
    ```sql
-   create extension if not exists pg_cron;
-   create extension if not exists pg_net;
-   select cron.schedule('remind', '* * * * *', $$
-     select net.http_post(
-       url := 'https://<ref>.supabase.co/functions/v1/remind',
-       headers := '{"Content-Type":"application/json","x-cron-secret":"<CRON_SECRET>"}'::jsonb
-     )
-   $$);
+   delete from vault.secrets where name = 'cron_secret';
+   select vault.create_secret('<CRON_SECRET>', 'cron_secret');
    ```
+   예약 자체는 `supabase/migrations/0002_cron.sql`이 만든다.
 
 로컬에서 쓰려면 `.env.example`을 `.env`로 복사해 값을 채웁니다.
 
