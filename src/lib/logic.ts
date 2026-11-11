@@ -1,5 +1,6 @@
 import type { Book, Data, Habit, Session, Task } from './types';
 import { addDays, daysBetween, lastDays, parseDay, weekStart, yearKey } from './date';
+import { knownCount, passedDays, wordStreak } from './vocab';
 
 // 루틴(요일별 고정 할 일)을 그날 할 일로 깔아준다. 바뀐 게 없으면 같은 객체를 돌려준다.
 export function ensureRoutineTasks(data: Data, day: string): Data {
@@ -262,6 +263,30 @@ export interface MateSummary {
     done: number;
     total: number;
     tasks?: { title: string; done: boolean }[];
+    words?: MateWords; // 예전 버전 앱이 올린 요약엔 없음
+}
+
+// 메이트끼리 비교하는 영단어 기록
+export interface MateWords {
+    known: number; // 외운 단어
+    days: number; // 통과한 DAY
+    today: number; // 오늘 푼 문제
+    week: number; // 이번 주 푼 문제
+    streak: number;
+    last: string;
+}
+
+function mateWords(data: Data, day: string): MateWords {
+    const log = data.wordLog;
+    const wk = weekStart(day);
+    return {
+        known: knownCount(data),
+        days: passedDays(data).size,
+        today: log[day]?.count ?? 0,
+        week: Object.entries(log).reduce((a, [d, l]) => a + (d >= wk && d <= day ? l.count : 0), 0),
+        streak: wordStreak(log, day),
+        last: log[day] ? day : addDays(day, -1),
+    };
 }
 
 export function mateSummary(data: Data, day: string): MateSummary {
@@ -281,12 +306,19 @@ export function mateSummary(data: Data, day: string): MateSummary {
         done: todays.filter((t) => t.done).length,
         total: todays.length,
         ...(data.settings.shareTasks ? { tasks: todays.map((t) => ({ title: t.title, done: t.done })) } : {}),
+        words: mateWords(data, day),
     };
 }
 
 // 메이트가 며칠 전에 올린 요약을 오늘 기준으로 맞춘다 (날이 바뀌면 오늘 칸은 비우고, 연속은 어제까지 했을 때만)
 export function mateToday(s: MateSummary, day: string): MateSummary {
     const streak = s.last >= addDays(day, -1) ? s.streak : 0;
-    if (s.day === day) return { ...s, streak };
-    return { ...s, streak, todayMin: 0, done: 0, total: 0, tasks: s.tasks && [], weekMin: weekStart(s.day) === weekStart(day) ? s.weekMin : 0 };
+    const sameWeek = weekStart(s.day) === weekStart(day);
+    const w = s.words && {
+        ...s.words,
+        streak: s.words.last >= addDays(day, -1) ? s.words.streak : 0,
+        ...(s.day === day ? {} : { today: 0, week: sameWeek ? s.words.week : 0 }),
+    };
+    if (s.day === day) return { ...s, streak, ...(w && { words: w }) };
+    return { ...s, streak, todayMin: 0, done: 0, total: 0, tasks: s.tasks && [], weekMin: sameWeek ? s.weekMin : 0, ...(w && { words: w }) };
 }

@@ -194,6 +194,16 @@ describe('공부 메이트 요약', () => {
         expect(mateToday(s, '2026-11-13').streak).toBe(0);
         expect(mateToday(s, '2026-11-16').weekMin).toBe(0); // 다음 주
     });
+    it('영단어 기록도 올리고, 날이 지나면 오늘 칸을 비운다', () => {
+        const d = base();
+        d.words = { a: { lv: 1, due: day, wrong: 0 }, b: { lv: 0, due: day, wrong: 2 } };
+        d.wordLog = { [addDays(day, -1)]: { days: [0], count: 40 }, [day]: { days: [1], count: 50 } };
+        const s = mateSummary(d, day);
+        expect(s.words).toMatchObject({ known: 1, days: 2, today: 50, streak: 2, last: day });
+        expect(mateToday(s, addDays(day, 1)).words).toMatchObject({ today: 0, streak: 2 });
+        expect(mateToday(s, addDays(day, 3)).words!.streak).toBe(0);
+        expect(mateToday({ ...s, words: undefined }, day).words).toBeUndefined(); // 예전 앱 요약
+    });
 });
 
 describe('워드마스터 단어', () => {
