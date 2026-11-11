@@ -87,6 +87,7 @@ function Home({ go }: { go: (v: View) => void }) {
     const known = knownCount(data);
     const wrong = wrongWords(data).length;
     const left = WORD_DAYS.length - passed.size;
+    const [hide, setHide] = useState(false);
 
     return (
         <>
@@ -124,6 +125,19 @@ function Home({ go }: { go: (v: View) => void }) {
                         </>
                     )}
                 </Card>
+
+                {mine.length > 0 && (
+                    <Card
+                        title={`오늘의 단어 ${wordsOf(mine).length}개`}
+                        extra={
+                            <Chip active={hide} onClick={() => setHide(!hide)}>
+                                뜻 가리기
+                            </Chip>
+                        }
+                    >
+                        <WordList words={wordsOf(mine)} hide={hide} />
+                    </Card>
+                )}
 
                 <Card title="오늘 복습" extra={<span className="text-sm text-[#8b95a1]">1·3·7·14·30일 간격</span>}>
                     {due.length ? (
@@ -197,8 +211,10 @@ function stateLabel(s?: WordState) {
     return ['외움', 'text-[#00a86b]'];
 }
 
-function WordList({ words }: { words: Word[] }) {
+// hide: 뜻을 가리고, 누르면 그 단어만 보여 준다
+function WordList({ words, hide = false }: { words: Word[]; hide?: boolean }) {
     const data = useData();
+    const [open, setOpen] = useState<Set<string>>(new Set());
     return (
         <ul className="divide-y divide-[#f2f4f6] dark:divide-[#26292e]">
             {words.map(([w, m]) => {
@@ -206,10 +222,10 @@ function WordList({ words }: { words: Word[] }) {
                 const [l, cls] = stateLabel(s);
                 return (
                     <li key={w}>
-                        <button type="button" className="w-full flex items-center gap-3 py-2.5 text-left" onClick={() => speak(w)}>
+                        <button type="button" className="w-full flex items-center gap-3 py-2.5 text-left" onClick={() => (speak(w), setOpen(new Set(open).add(w)))}>
                             <span className="min-w-0 flex-1">
                                 <span className="block font-semibold text-[15px]">{w}</span>
-                                <span className="block text-[13px] text-[#8b95a1]">{m}</span>
+                                <span className="block text-[13px] text-[#8b95a1]">{hide && !open.has(w) ? '눌러서 뜻 보기' : m}</span>
                             </span>
                             <span className={`text-[12px] font-bold shrink-0 ${cls}`}>
                                 {l}
