@@ -44,7 +44,10 @@ export default function WordsPage() {
     const [view, setView] = useState<View>({ k: 'home' });
     const [round, setRound] = useState(0); // 같은 단어로 다시 볼 때도 테스트를 새로 시작
     const home = () => setView({ k: 'home' });
-    useEffect(() => window.scrollTo(0, 0), [view]);
+    // 중괄호 필수: 최신 브라우저는 scrollTo 가 Promise 를 돌려줘서 React 가 정리 함수로 착각한다
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [view]);
 
     switch (view.k) {
         case 'home':
