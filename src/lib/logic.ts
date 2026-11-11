@@ -245,6 +245,8 @@ export function mergeData(local: Data, remote: Data): Data {
         plans: { ...remote.plans, ...local.plans },
         days: { ...remote.days, ...local.days },
         reviews: { ...remote.reviews, ...local.reviews },
+        words: { ...remote.words, ...local.words },
+        wordLog: { ...remote.wordLog, ...local.wordLog },
     };
 }
 

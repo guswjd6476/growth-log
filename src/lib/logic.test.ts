@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyData } from './store';
+import { choices, dueWords, finishTest, grade, passedDays, sameSpelling, todayDays, wordStreak } from './vocab';
 import {
     byTime,
     ensureRoutineTasks,
@@ -192,5 +193,53 @@ describe('공부 메이트 요약', () => {
         expect(mateToday(s, '2026-11-12')).toMatchObject({ streak: 3, todayMin: 0, total: 0, weekMin: 50, tasks: [] });
         expect(mateToday(s, '2026-11-13').streak).toBe(0);
         expect(mateToday(s, '2026-11-16').weekMin).toBe(0); // 다음 주
+    });
+});
+
+describe('워드마스터 단어', () => {
+    it('50일 × 40단어, 빈 칸 없음', async () => {
+        const days = (await import('../data/wordmaster.json')).default as string[][][];
+        expect(days.length).toBe(50);
+        expect(days.every((d) => d.length === 40 && d.every(([w, m]) => w && m))).toBe(true);
+        expect(days[0][0]).toEqual(['provide', '공급하다, 준비하다']);
+    });
+    it('동기화 때 단어 기록을 합친다', () => {
+        const a = { ...emptyData(), words: { cat: { lv: 1, due: '2026-11-12', wrong: 0 } } };
+        const b = { ...emptyData(), words: { fox: { lv: 0, due: '2026-11-12', wrong: 1 } } };
+        expect(Object.keys(mergeData(a, b).words).sort()).toEqual(['cat', 'fox']);
+    });
+});
+
+describe('영단어 공부', () => {
+    const D = '2026-11-11';
+    it('하루 2 DAY: 통과 안 한 것부터, 오늘 통과한 건 오늘 목록에 남음', () => {
+        const d = emptyData();
+        expect(todayDays(d, D)).toEqual([0, 1]);
+        finishTest(d, D, 80, [0, 1]);
+        expect(todayDays(d, D)).toEqual([0, 1]);
+        expect(todayDays(d, '2026-11-12')).toEqual([2, 3]);
+        finishTest(d, D, 10, []); // 통과 못 한 테스트는 DAY 를 안 남김
+        expect(passedDays(d).size).toBe(2);
+    });
+    it('간격 복습: 맞히면 간격이 늘고 틀리면 내일 다시, 복습일 전엔 안 오름', () => {
+        const d = emptyData();
+        grade(d, 'cat', true, D);
+        expect(d.words.cat).toEqual({ lv: 1, due: '2026-11-12', wrong: 0 });
+        grade(d, 'cat', true, D); // 같은 날 또 맞혀도 그대로
+        expect(d.words.cat.lv).toBe(1);
+        grade(d, 'cat', true, '2026-11-12');
+        expect(d.words.cat).toEqual({ lv: 2, due: '2026-11-15', wrong: 0 });
+        grade(d, 'cat', false, '2026-11-15');
+        expect(d.words.cat).toEqual({ lv: 0, due: '2026-11-16', wrong: 1 });
+        expect(dueWords(d, '2026-11-16')).toHaveLength(0); // 'cat' 은 단어장에 없는 단어
+    });
+    it('연속 학습일, 보기 4개, 스펠링 비교', () => {
+        const log = { '2026-11-09': { days: [], count: 1 }, '2026-11-10': { days: [0], count: 1 } };
+        expect(wordStreak(log, D)).toBe(2);
+        expect(wordStreak(log, '2026-11-13')).toBe(0);
+        const o = choices(['provide', '공급하다, 준비하다'], 1);
+        expect(new Set(o).size).toBe(4);
+        expect(o).toContain('공급하다, 준비하다');
+        expect(sameSpelling(' Provide ', 'provide')).toBe(true);
     });
 });

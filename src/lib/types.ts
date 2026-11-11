@@ -115,6 +115,17 @@ export interface DayLog {
     mood?: number; // 1~5
 }
 
+// 영단어 간격 복습: 맞히면 lv 이 올라 복습 간격이 늘고, 틀리면 0 으로
+export interface WordState {
+    lv: number;
+    due: string; // 다음 복습일
+    wrong: number; // 누적 틀린 횟수
+}
+export interface WordLog {
+    days: number[]; // 이날 테스트 통과한 DAY (0부터)
+    count: number; // 이날 푼 문제 수
+}
+
 export interface Settings {
     mode: Mode;
     theme: 'system' | 'light' | 'dark';
@@ -144,5 +155,7 @@ export interface Data {
     captures: Capture[];
     days: Record<string, DayLog>;
     reviews: Record<string, Record<string, string>>; // 주 시작일 → 질문 → 답
+    words: Record<string, WordState>; // 영단어 → 암기 상태
+    wordLog: Record<string, WordLog>; // 날짜 → 그날 영단어 공부
     settings: Settings;
 }

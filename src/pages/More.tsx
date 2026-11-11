@@ -6,6 +6,7 @@ import { Bar, Card, PageTitle } from '../components/ui';
 
 const ITEMS: [Route, string, string, string][] = [
     ['mates', '🤝', '공부 메이트', '초대 코드로 친구 맺기, 서로 오늘 공부·일정 보기'],
+    ['words', '🔤', '영단어', '워드마스터 수능 2000, DAY별 카드로 외우기'],
     ['habits', '🔥', '습관', '매일·주 n회 체크, 연속 기록, 잔디'],
     ['goals', '🎯', '목표', '연·월·주 목표와 진행률, 변경 이력'],
     ['journal', '📝', '기록', '캡처함, 일기, 주간 회고, #태그 연결'],

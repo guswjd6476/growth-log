@@ -20,6 +20,8 @@ export const emptyData = (): Data => ({
     captures: [],
     days: {},
     reviews: {},
+    words: {},
+    wordLog: {},
     settings: {
         mode: 'plan',
         theme: 'system',

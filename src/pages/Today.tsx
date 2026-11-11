@@ -6,6 +6,7 @@ import { byTime, habitWeekCount, levelOf, mateSummary, mateToday, planVsActual, 
 import { Badge, Bar, Btn, Card, Empty, inputCls, useAsk } from '../components/ui';
 import { HabitRow, QuickAdd, TaskRow } from '../components/items';
 import { go } from '../lib/nav';
+import { dayName, dueWords, passedDays, todayDays } from '../lib/vocab';
 
 export default function TodayPage() {
     const data = useData();
@@ -62,6 +63,8 @@ export default function TodayPage() {
                 </Card>
 
                 <TomorrowCard />
+
+                <WordsCard />
 
                 <Card title="습관" extra={<button type="button" className="text-sm text-brand font-semibold" onClick={() => go('habits')}>관리</button>}>
                     {habits.length ? (
@@ -359,5 +362,28 @@ function DayLine() {
                 onBlur={() => text !== (cur.line ?? '') && setDayLine(day, text)}
             />
         </Card>
+    );
+}
+
+function WordsCard() {
+    const data = useData();
+    const day = today();
+    const mine = todayDays(data, day);
+    const passed = passedDays(data);
+    const due = dueWords(data, day).length;
+    if (!mine.length && !due) return null;
+    return (
+        <button type="button" className="w-full text-left" onClick={() => go('words')}>
+            <Card title="🔤 오늘의 영단어" extra={<span className="text-sm text-brand font-semibold">공부하기 ›</span>}>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[15px]">
+                    {mine.map((i) => (
+                        <span key={i} className={passed.has(i) ? 'text-[#b0b8c1] line-through' : 'font-semibold'}>
+                            {dayName(i)}
+                        </span>
+                    ))}
+                    {due > 0 && <span className="text-[#e42939]">복습 {due}개</span>}
+                </div>
+            </Card>
+        </button>
     );
 }

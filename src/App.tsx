@@ -16,6 +16,7 @@ import StatsPage from './pages/Stats';
 import SettingsPage from './pages/Settings';
 import LoginPage from './pages/Login';
 import MatesPage from './pages/Mates';
+import WordsPage from './pages/Words';
 import { syncEmail, useSync } from './lib/sync';
 
 const PAGES: Record<Route, () => React.JSX.Element> = {
@@ -30,6 +31,7 @@ const PAGES: Record<Route, () => React.JSX.Element> = {
     stats: StatsPage,
     settings: SettingsPage,
     mates: MatesPage,
+    words: WordsPage,
 };
 const TABS: { route: Route; label: string; icon: string }[] = [
     { route: 'today', label: '오늘', icon: '☀️' },
@@ -38,7 +40,7 @@ const TABS: { route: Route; label: string; icon: string }[] = [
     { route: 'books', label: '독서', icon: '📚' },
     { route: 'more', label: '더보기', icon: '☰' },
 ];
-const MORE: Route[] = ['more', 'habits', 'goals', 'journal', 'stats', 'settings', 'mates'];
+const MORE: Route[] = ['more', 'habits', 'goals', 'journal', 'stats', 'settings', 'mates', 'words'];
 
 const readRoute = (): Route => {
     const r = location.hash.replace('#/', '') as Route;
