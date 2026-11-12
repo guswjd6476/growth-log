@@ -10,6 +10,7 @@ import {
     mateSummary,
     mateToday,
     mergeData,
+    finishBookGoals,
     planVsActual,
     staleBooks,
     tagIndex,
@@ -251,5 +252,16 @@ describe('영단어 공부', () => {
         expect(new Set(o).size).toBe(4);
         expect(o).toContain('공급하다, 준비하다');
         expect(sameSpelling(' Provide ', 'provide')).toBe(true);
+    });
+});
+
+describe('읽고 싶은 책 목표', () => {
+    it('그 책의 진행 중 목표만 달성으로 바꾼다', () => {
+        const d = emptyData();
+        const g = (id: string, bookId?: string, dropped?: string) => ({ id, title: id, period: 'month' as const, key: '2026-11', done: false, bookId, dropped, history: [], createdAt: '' });
+        d.goals = [g('a', 'b1'), g('b', 'b2'), g('c', 'b1', '포기'), g('d')];
+        finishBookGoals(d, 'b1', '2026-11-12');
+        expect(d.goals.map((x) => x.done)).toEqual([true, false, false, false]);
+        expect(d.goals[0].history[0].date).toBe('2026-11-12');
     });
 });

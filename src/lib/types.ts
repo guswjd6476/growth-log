@@ -85,6 +85,7 @@ export interface Book {
     startedAt?: string;
     finishedAt?: string;
     dropReason?: string;
+    review?: string; // 독후감
     lastTouched: string;
     notes: BookNote[];
     progress: { date: string; page: number }[];
@@ -99,6 +100,7 @@ export interface Goal {
     done: boolean;
     dropped?: string; // 포기 사유
     note?: string;
+    bookId?: string; // 읽고 싶은 책 목표 → 완독하면 자동 달성
     history: { date: string; text: string }[]; // 변경 이력
     createdAt: string;
 }

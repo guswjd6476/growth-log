@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { uid, update, useData } from '../lib/store';
 import { addTask } from '../lib/actions';
-import { addDays, monthKey, shortDay, today, weekStart, yearKey } from '../lib/date';
+import { addDays, keyOf, shortDay, today } from '../lib/date';
 import { Bar, Btn, Card, Chip, Empty, inputCls, PageTitle, Sheet, useAsk } from '../components/ui';
 import { QuickAdd, TaskRow } from '../components/items';
 import type { Goal, GoalPeriod } from '../lib/types';
@@ -11,7 +11,6 @@ const PERIODS: [GoalPeriod, string][] = [
     ['month', '이번 달'],
     ['week', '이번 주'],
 ];
-const keyOf = (p: GoalPeriod, day: string) => (p === 'year' ? yearKey(day) : p === 'month' ? monthKey(day) : weekStart(day));
 const shift = (p: GoalPeriod, key: string, n: number) => {
     if (p === 'week') return addDays(key, 7 * n);
     if (p === 'year') return String(Number(key) + n);

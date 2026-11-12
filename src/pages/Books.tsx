@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { uid, update, useData } from '../lib/store';
-import { shortDay, today } from '../lib/date';
-import { BOOK_QUESTIONS, readingCount } from '../lib/logic';
+import { keyOf, shortDay, today } from '../lib/date';
+import { BOOK_QUESTIONS, finishBookGoals, readingCount } from '../lib/logic';
 import { Bar, Btn, Card, Chip, Empty, inputCls, label, PageTitle, Sheet, useAsk } from '../components/ui';
-import type { Book, BookNote, BookStatus } from '../lib/types';
+import type { Book, BookNote, BookStatus, Data, GoalPeriod } from '../lib/types';
 
 const STATUS: [BookStatus, string][] = [
     ['reading', '읽는 중'],
@@ -36,6 +36,9 @@ export default function BooksPage() {
             {tab === 'reading' && readingCount(data.books) > data.settings.wipLimit && (
                 <p className="text-[13px] text-[#e42939] mb-3 px-1">동시에 읽는 책이 한도({data.settings.wipLimit}권)를 넘었어요. 하나를 끝내거나 보류해 보세요.</p>
             )}
+            {tab === 'done' && list.length > 0 ? (
+                <Shelf books={list} onOpen={setOpenId} />
+            ) : (
             <div className="space-y-2">
                 {list.length ? (
                     list.map((b) => (
@@ -54,6 +57,7 @@ export default function BooksPage() {
                                         </>
                                     )}
                                     {b.dropReason && <div className="text-[12px] text-[#8b95a1] mt-1">포기: {b.dropReason}</div>}
+                                    {goalOf(data, b.id) && <div className="text-[12px] text-brand font-semibold mt-1">🎯 {PERIOD_LABEL[goalOf(data, b.id)!.period]} 읽기 목표</div>}
                                 </div>
                             </Card>
                         </button>
@@ -64,9 +68,52 @@ export default function BooksPage() {
                     </Card>
                 )}
             </div>
+            )}
             <AddBookSheet open={adding} onClose={() => setAdding(false)} onAdded={(id) => setOpenId(id)} />
             {open && <BookSheet b={open} onClose={() => setOpenId(null)} />}
         </>
+    );
+}
+
+const PERIOD_LABEL: Record<GoalPeriod, string> = { week: '이번 주', month: '이번 달', year: '올해' };
+// 이 책에 걸린, 아직 진행 중인 목표
+const goalOf = (d: Data, bookId: string) => d.goals.find((g) => g.bookId === bookId && !g.done && !g.dropped);
+
+// 다 읽은 책 표지를 연도별로 나열
+function Shelf({ books, onOpen }: { books: Book[]; onOpen: (id: string) => void }) {
+    const years = new Map<string, Book[]>();
+    [...books]
+        .sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))
+        .forEach((b) => {
+            const y = (b.finishedAt ?? b.lastTouched).slice(0, 4);
+            years.set(y, [...(years.get(y) ?? []), b]);
+        });
+    return (
+        <div className="space-y-5">
+            {[...years].map(([y, list]) => (
+                <section key={y}>
+                    <h2 className="text-[15px] font-bold mb-2 px-1">
+                        {y}년 <span className="text-[#8b95a1] font-semibold">{list.length}권</span>
+                    </h2>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        {list.map((b) => (
+                            <button key={b.id} type="button" onClick={() => onOpen(b.id)} className="text-left" aria-label={b.title}>
+                                {b.cover ? (
+                                    <img src={b.cover} alt="" loading="lazy" className="w-full aspect-[2/3] rounded-lg object-cover bg-[#f2f4f6] shadow-sm" />
+                                ) : (
+                                    <div className="w-full aspect-[2/3] rounded-lg bg-brand-soft dark:bg-[#1d2c44] p-2 flex items-center text-[12px] font-semibold leading-4 text-brand line-clamp-5 shadow-sm">{b.title}</div>
+                                )}
+                                <div className="text-[12px] font-semibold mt-1 truncate">{b.title}</div>
+                                <div className="text-[11px] text-[#8b95a1] h-4">
+                                    {b.rating ? <span className="text-[#ffb400]">{'★'.repeat(b.rating)}</span> : null}
+                                    {b.review ? ' ✍️' : ''}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+            ))}
+        </div>
     );
 }
 
@@ -200,7 +247,14 @@ function BookSheet({ b, onClose }: { b: Book; onClose: () => void }) {
             const x = d.books.find((y) => y.id === b.id)!;
             fn(x);
             x.lastTouched = day;
+            if (x.status === 'done') finishBookGoals(d, x.id, day);
         });
+    const goal = goalOf(data, b.id);
+    const setGoal = (period: GoalPeriod) =>
+        update((d) => {
+            d.goals.push({ id: uid(), title: `📚 『${b.title}』 읽기`, period, key: keyOf(period, day), done: false, bookId: b.id, history: [{ date: day, text: '읽고 싶은 책에서 만듦' }], createdAt: new Date().toISOString() });
+        });
+    const clearGoal = () => update((d) => void (d.goals = d.goals.filter((g) => g.id !== goal?.id)));
 
     const savePage = () => {
         const p = Math.max(0, Math.min(Number(page) || 0, b.pages || Infinity));
@@ -279,6 +333,38 @@ function BookSheet({ b, onClose }: { b: Book; onClose: () => void }) {
                     </Btn>
                 ))}
             </div>
+
+            {b.status !== 'done' && b.status !== 'dropped' && (
+                <>
+                    <label className={label}>읽기 목표</label>
+                    {goal ? (
+                        <div className="flex items-center justify-between rounded-xl bg-brand-soft dark:bg-[#1d2c44] px-3 py-2.5">
+                            <span className="text-[14px] text-brand font-semibold">🎯 {PERIOD_LABEL[goal.period]} 안에 읽기</span>
+                            <button type="button" className="text-[13px] text-[#8b95a1]" onClick={clearGoal}>
+                                목표 빼기
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex gap-1.5">
+                            {(['week', 'month', 'year'] as const).map((p) => (
+                                <Chip key={p} onClick={() => setGoal(p)}>
+                                    {PERIOD_LABEL[p]}
+                                </Chip>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            <label className={label}>독후감</label>
+            <textarea
+                key={b.id}
+                className={`${inputCls} min-h-[140px] leading-6`}
+                defaultValue={b.review ?? ''}
+                placeholder={b.status === 'done' ? '다 읽고 나서 남은 생각, 기억하고 싶은 것, 누구에게 권하고 싶은지' : '읽으면서 써 두고, 다 읽으면 마무리해요'}
+                onBlur={(e) => e.target.value.trim() !== (b.review ?? '') && edit((x) => void (x.review = e.target.value.trim() || undefined))}
+            />
+            <p className="text-[12px] text-[#8b95a1] mt-1">입력창을 벗어나면 저장돼요</p>
 
             <label className={label}>메모</label>
             <div className="flex gap-1.5 mb-2">

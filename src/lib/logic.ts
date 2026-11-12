@@ -322,3 +322,12 @@ export function mateToday(s: MateSummary, day: string): MateSummary {
     if (s.day === day) return { ...s, streak, ...(w && { words: w }) };
     return { ...s, streak, todayMin: 0, done: 0, total: 0, tasks: s.tasks && [], weekMin: sameWeek ? s.weekMin : 0, ...(w && { words: w }) };
 }
+
+// 읽고 싶은 책 목표: 그 책을 다 읽으면 걸린 목표를 달성으로 (d 를 직접 고친다)
+export function finishBookGoals(d: Data, bookId: string, day: string) {
+    d.goals.forEach((g) => {
+        if (g.bookId !== bookId || g.done || g.dropped) return;
+        g.done = true;
+        g.history.push({ date: day, text: '책을 다 읽어서 달성' });
+    });
+}

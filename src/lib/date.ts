@@ -37,3 +37,6 @@ export const fmtMin = (min: number) => {
     if (m < 60) return `${m}분`;
     return `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}`;
 };
+
+// 목표 기간의 키: 올해 '2026', 이번 달 '2026-11', 이번 주 그 주 시작일
+export const keyOf = (p: 'year' | 'month' | 'week', day: string) => (p === 'year' ? yearKey(day) : p === 'month' ? monthKey(day) : weekStart(day));

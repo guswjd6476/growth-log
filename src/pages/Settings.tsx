@@ -45,7 +45,7 @@ export default function SettingsPage() {
         download(`공부기록-${today()}.csv`, toCSV(d.sessions.map((x) => ({ 날짜: x.date, 과목: x.subject, 분: x.minutes, 방식: x.kind }))), 'text/csv');
         download(
             `독서기록-${today()}.csv`,
-            toCSV(d.books.map((b) => ({ 제목: b.title, 저자: b.author ?? '', 상태: b.status, 읽은쪽: b.current, 전체쪽: b.pages, 별점: b.rating ?? '', 시작: b.startedAt ?? '', 완독: b.finishedAt ?? '', 포기사유: b.dropReason ?? '', 메모수: b.notes.length }))),
+            toCSV(d.books.map((b) => ({ 제목: b.title, 저자: b.author ?? '', 상태: b.status, 읽은쪽: b.current, 전체쪽: b.pages, 별점: b.rating ?? '', 시작: b.startedAt ?? '', 완독: b.finishedAt ?? '', 포기사유: b.dropReason ?? '', 독후감: b.review ?? '', 메모수: b.notes.length }))),
             'text/csv',
         );
         download(
