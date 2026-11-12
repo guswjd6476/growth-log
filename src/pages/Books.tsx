@@ -133,34 +133,53 @@ interface Found {
     pages: number;
 }
 
-// 카카오(우리 서버 함수) → Google 도서 순으로 찾는다. 둘 다 안 되면 직접 입력
+// 카카오(Supabase 함수 → Vercel 함수) → Google 도서 → Open Library 순으로 찾는다. 다 안 되면 직접 입력
+// Google 은 키 없이 쓰면 하루 사용량이 금방 바닥나서(429) 예비로만 쓴다
+const SB_URL = (import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://zgqmzucqboluhyhcdevr.supabase.co') as string;
 async function searchBooks(q: string): Promise<Found[]> {
-    try {
-        const r = await fetch(`/api/books?q=${encodeURIComponent(q)}`);
-        if (r.ok) return await r.json();
-    } catch {
-        // 로컬 개발이나 서버 함수가 없을 때 → Google 로
+    for (const url of [`${SB_URL}/functions/v1/books?q=${encodeURIComponent(q)}`, `/api/books?q=${encodeURIComponent(q)}`]) {
+        try {
+            const r = await fetch(url);
+            if (r.ok) return await r.json();
+        } catch {
+            // 다음 방법으로
+        }
     }
-    const query = /^[\d-]{10,17}$/.test(q.trim()) ? `isbn:${q.replace(/-/g, '')}` : q;
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=12`);
+    const isbn = /^[\d-]{10,17}$/.test(q.trim()) ? q.replace(/-/g, '') : null;
+    try {
+        const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(isbn ? `isbn:${isbn}` : q)}&maxResults=12`);
+        if (res.ok) {
+            const j = await res.json();
+            return (j.items ?? []).map((it: { volumeInfo: Record<string, any> }) => {
+                const v = it.volumeInfo;
+                return {
+                    title: v.title + (v.subtitle ? `: ${v.subtitle}` : ''),
+                    author: v.authors?.join(', '),
+                    cover: v.imageLinks?.thumbnail?.replace('http://', 'https://'),
+                    isbn: v.industryIdentifiers?.find((x: { type: string }) => x.type === 'ISBN_13')?.identifier,
+                    pages: v.pageCount ?? 0,
+                };
+            });
+        }
+    } catch {
+        // Open Library 로
+    }
+    const res = await fetch(`https://openlibrary.org/search.json?${isbn ? `isbn=${isbn}` : `q=${encodeURIComponent(q)}`}&limit=12&fields=title,author_name,cover_i,isbn,number_of_pages_median`);
     if (!res.ok) throw new Error('검색 실패');
-    const j = await res.json();
-    return (j.items ?? []).map((it: { volumeInfo: Record<string, any> }) => {
-        const v = it.volumeInfo;
-        return {
-            title: v.title + (v.subtitle ? `: ${v.subtitle}` : ''),
-            author: v.authors?.join(', '),
-            cover: v.imageLinks?.thumbnail?.replace('http://', 'https://'),
-            isbn: v.industryIdentifiers?.find((x: { type: string }) => x.type === 'ISBN_13')?.identifier,
-            pages: v.pageCount ?? 0,
-        };
-    });
+    const j = (await res.json()) as { docs: { title: string; author_name?: string[]; cover_i?: number; isbn?: string[]; number_of_pages_median?: number }[] };
+    return j.docs.map((d) => ({
+        title: d.title,
+        author: d.author_name?.join(', '),
+        cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : undefined,
+        isbn: d.isbn?.find((x) => x.length === 13),
+        pages: d.number_of_pages_median ?? 0,
+    }));
 }
 
 function AddBookSheet({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded: (id: string) => void }) {
     const [q, setQ] = useState('');
     const [found, setFound] = useState<Found[]>([]);
-    const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
+    const [state, setState] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle');
     const [manual, setManual] = useState({ title: '', author: '', pages: '' });
 
     const add = (f: Found, status: BookStatus) => {
@@ -175,8 +194,9 @@ function AddBookSheet({ open, onClose, onAdded }: { open: boolean; onClose: () =
         if (!q.trim()) return;
         setState('loading');
         try {
-            setFound(await searchBooks(q));
-            setState('idle');
+            const r = await searchBooks(q);
+            setFound(r);
+            setState(r.length ? 'idle' : 'empty');
         } catch {
             setState('error');
         }
@@ -190,6 +210,8 @@ function AddBookSheet({ open, onClose, onAdded }: { open: boolean; onClose: () =
                     검색
                 </Btn>
             </form>
+            {state === 'loading' && <p className="text-[13px] text-[#8b95a1] mt-2">찾는 중…</p>}
+            {state === 'empty' && <p className="text-[13px] text-[#8b95a1] mt-2">찾는 책이 없어요. 제목을 짧게 바꿔 보거나 아래에 직접 적어 주세요.</p>}
             {state === 'error' && <p className="text-[13px] text-[#e42939] mt-2">검색이 안 돼요. 아래에 직접 적어 주세요.</p>}
             <ul className="mt-3 space-y-2">
                 {found.map((f, i) => (
