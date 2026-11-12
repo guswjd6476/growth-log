@@ -264,6 +264,31 @@ export interface MateSummary {
     total: number;
     tasks?: { title: string; done: boolean }[];
     words?: MateWords; // 예전 버전 앱이 올린 요약엔 없음
+    books?: MateBooks; // shareBooks 를 켰을 때만
+}
+
+// 메이트에게 보이는 책장: 읽는 중인 책과 최근 완독 책(독후감 포함)
+export interface MateBooks {
+    yearDone: number;
+    reading: { title: string; author?: string; cover?: string; pct: number }[];
+    done: { title: string; author?: string; cover?: string; rating?: number; review?: string; finishedAt?: string }[];
+}
+
+// 요약은 매번 통째로 올라가니 개수와 독후감 길이를 줄여 둔다
+function mateBooks(data: Data, day: string): MateBooks {
+    const pick = ({ title, author, cover }: Book) => ({ title, author, cover });
+    return {
+        yearDone: data.books.filter((b) => b.status === 'done' && b.finishedAt?.startsWith(day.slice(0, 4))).length,
+        reading: data.books
+            .filter((b) => b.status === 'reading')
+            .slice(0, 5)
+            .map((b) => ({ ...pick(b), pct: b.pages > 0 ? Math.min(100, Math.round((b.current / b.pages) * 100)) : 0 })),
+        done: data.books
+            .filter((b) => b.status === 'done')
+            .sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))
+            .slice(0, 6)
+            .map((b) => ({ ...pick(b), rating: b.rating, review: b.review?.slice(0, 300), finishedAt: b.finishedAt })),
+    };
 }
 
 // 메이트끼리 비교하는 영단어 기록
@@ -307,6 +332,7 @@ export function mateSummary(data: Data, day: string): MateSummary {
         total: todays.length,
         ...(data.settings.shareTasks ? { tasks: todays.map((t) => ({ title: t.title, done: t.done })) } : {}),
         words: mateWords(data, day),
+        ...(data.settings.shareBooks ? { books: mateBooks(data, day) } : {}),
     };
 }
 

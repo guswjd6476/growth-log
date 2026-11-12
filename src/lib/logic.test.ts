@@ -195,6 +195,19 @@ describe('공부 메이트 요약', () => {
         expect(mateToday(s, '2026-11-13').streak).toBe(0);
         expect(mateToday(s, '2026-11-16').weekMin).toBe(0); // 다음 주
     });
+    it('독서 기록은 켰을 때만, 완독은 최근 순으로', () => {
+        const d = base();
+        const bk = (id: string, status: 'reading' | 'done' | 'want', finishedAt?: string) =>
+            ({ id, title: id, pages: 200, current: 50, status, finishedAt, review: 'x'.repeat(500), lastTouched: day, notes: [], progress: [] });
+        d.books = [bk('a', 'done', '2025-12-01'), bk('b', 'done', '2026-11-01'), bk('c', 'reading'), bk('d', 'want')];
+        expect(mateSummary(d, day).books).toBeUndefined();
+        d.settings.shareBooks = true;
+        const b = mateSummary(d, day).books!;
+        expect(b.yearDone).toBe(1);
+        expect(b.reading).toEqual([{ title: 'c', author: undefined, cover: undefined, pct: 25 }]);
+        expect(b.done.map((x) => x.title)).toEqual(['b', 'a']);
+        expect(b.done[0].review).toHaveLength(300);
+    });
     it('영단어 기록도 올리고, 날이 지나면 오늘 칸을 비운다', () => {
         const d = base();
         d.words = { a: { lv: 1, due: day, wrong: 0 }, b: { lv: 0, due: day, wrong: 2 } };

@@ -60,20 +60,12 @@ export default function MatesPage() {
                 <Card title="내 정보">
                     <label className={label}>메이트에게 보이는 이름</label>
                     <input className={inputCls} value={s.nickname} maxLength={20} placeholder="예: 현정" onChange={(e) => set('nickname', e.target.value)} />
-                    <div className="flex items-center justify-between mt-4">
-                        <span className="text-[14px]">오늘 할 일 목록도 보여 주기</span>
-                        {s.shareTasks ? (
-                            <Btn small kind="ghost" onClick={() => set('shareTasks', false)}>
-                                끄기
-                            </Btn>
-                        ) : (
-                            <Btn small onClick={() => set('shareTasks', true)}>
-                                켜기
-                            </Btn>
-                        )}
-                    </div>
+                    <Toggle label="오늘 할 일 목록도 보여 주기" on={s.shareTasks} set={(v) => set('shareTasks', v)} />
+                    <Toggle label="독서 기록도 보여 주기" on={s.shareBooks} set={(v) => set('shareBooks', v)} />
                     <p className="text-[12px] text-[#8b95a1] mt-2">
-                        {s.shareTasks ? '메이트가 오늘 할 일 제목과 완료 여부를 볼 수 있어요.' : '지금은 공부 시간·연속일·할 일 개수·영단어 기록만 보여요.'} 일기·습관·독서 기록은 보이지 않아요.
+                        공부 시간·연속일·할 일 개수·영단어 기록은 늘 보여요.
+                        {s.shareTasks && ' 오늘 할 일 제목과 완료 여부도 보여요.'}
+                        {s.shareBooks && ' 읽는 중인 책, 최근 완독 6권과 별점·독후감도 보여요.'} 일기·습관 기록은 보이지 않아요.
                     </p>
                 </Card>
 
@@ -99,6 +91,7 @@ export default function MatesPage() {
                 </Card>
 
                 <WordRace people={people} />
+                <MateShelf people={people} />
 
                 <Card title="이번 주 순위">
                     {rows && people.length === 1 && <Empty>아직 메이트가 없어요. 초대 코드를 친구에게 보내 보세요.</Empty>}
@@ -202,6 +195,87 @@ function WordRace({ people }: { people: { row: Row | null; s: MateSummary }[] })
                 ))}
             </ul>
             <p className="text-[12px] text-[#8b95a1] mt-3">{name} 기준 · 외운 단어는 테스트에서 맞힌 단어예요</p>
+        </Card>
+    );
+}
+
+function Toggle({ label: l, on, set }: { label: string; on: boolean; set: (v: boolean) => void }) {
+    return (
+        <div className="flex items-center justify-between mt-4">
+            <span className="text-[14px]">{l}</span>
+            {on ? (
+                <Btn small kind="ghost" onClick={() => set(false)}>
+                    끄기
+                </Btn>
+            ) : (
+                <Btn small onClick={() => set(true)}>
+                    켜기
+                </Btn>
+            )}
+        </div>
+    );
+}
+
+const Cover = ({ src }: { src?: string }) =>
+    src ? <img src={src} alt="" loading="lazy" className="w-10 h-14 rounded object-cover shrink-0 bg-[#f2f4f6]" /> : <div className="w-10 h-14 rounded shrink-0 bg-[#f2f4f6] dark:bg-[#26292e] grid place-items-center">📕</div>;
+
+// 독서 기록을 공개한 사람들의 책장: 읽는 중 + 최근 완독(독후감)
+function MateShelf({ people }: { people: { row: Row | null; s: MateSummary }[] }) {
+    const list = people.filter((p) => p.s.books);
+    if (!list.length) return null;
+    return (
+        <Card title="📚 메이트 책장">
+            <ul className="space-y-4">
+                {list.map(({ row, s: p }) => {
+                    const b = p.books!;
+                    return (
+                        <li key={row?.user_id ?? 'me'}>
+                            <div className="font-semibold text-[14px]">
+                                {p.name}
+                                {!row && <span className="ml-1.5 text-[11px] rounded-full bg-brand-soft text-brand px-2 py-0.5">나</span>}
+                                <span className="ml-2 text-[12px] font-normal text-[#8b95a1]">올해 완독 {b.yearDone}권</span>
+                            </div>
+                            {b.reading.length + b.done.length === 0 && <p className="text-[13px] text-[#b0b8c1] mt-1">아직 책장이 비어 있어요</p>}
+                            <ul className="mt-2 space-y-2">
+                                {b.reading.map((r, i) => (
+                                    <li key={`r${i}`} className="flex gap-3 items-center">
+                                        <Cover src={r.cover} />
+                                        <div className="flex-1 min-w-0 text-[13px]">
+                                            <div className="truncate font-medium">📖 {r.title}</div>
+                                            <div className="mt-1 h-1.5 rounded-full bg-[#f2f4f6] dark:bg-[#26292e] overflow-hidden">
+                                                <div className="h-full rounded-full bg-brand" style={{ width: `${r.pct}%` }} />
+                                            </div>
+                                            <div className="text-[11px] text-[#8b95a1] mt-0.5">읽는 중 {r.pct}%</div>
+                                        </div>
+                                    </li>
+                                ))}
+                                {b.done.map((d, i) => (
+                                    <li key={`d${i}`} className="flex gap-3">
+                                        <Cover src={d.cover} />
+                                        <div className="flex-1 min-w-0 text-[13px]">
+                                            <div className="truncate font-medium">
+                                                ✅ {d.title}
+                                                {d.rating ? <span className="ml-1 text-[#ffb400]">{'★'.repeat(d.rating)}</span> : null}
+                                            </div>
+                                            <div className="text-[11px] text-[#8b95a1]">
+                                                {d.author}
+                                                {d.author && d.finishedAt && ' · '}
+                                                {d.finishedAt && `${d.finishedAt} 완독`}
+                                            </div>
+                                            {d.review && (
+                                                <details className="mt-1">
+                                                    <summary className="text-[12px] text-brand cursor-pointer">독후감 보기</summary>
+                                                    <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#4e5968] dark:text-[#c5cad1]">{d.review}</p>
+                                                </details>
+                                            )}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </li>
+                    );
+                })}
+            </ul>
         </Card>
     );
 }

@@ -35,6 +35,7 @@ export const emptyData = (): Data => ({
         notify: false,
         nickname: '',
         shareTasks: false,
+        shareBooks: false,
     },
 });
 
