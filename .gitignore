@@ -6,3 +6,4 @@ dev-dist
 .env.local
 supabase/seed.sql
 supabase/.temp
+*.tsbuildinfo
